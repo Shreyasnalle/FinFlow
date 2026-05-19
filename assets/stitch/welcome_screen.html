@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Finance Forecast Splash Screen</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration for Custom Theme Colors -->
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            'kiwi-dark-grey': '#222222',
+            'kiwi-neon': '#89EB00',
+            'kiwi-surface': '#2D2D2D',
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          borderRadius: {
+            'kiwi-full': '9999px',
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Styles -->
+<style data-purpose="background-animations">
+    /* Subtle glowing gradient background movement for Night & Kiwi */
+    .bg-gradient-animate {
+      background: radial-gradient(circle at center, #2d2d2d 0%, #222222 100%);
+      background-size: 200% 200%;
+      animation: gradientShift 10s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Rising Line Animation for the Logo */
+    .draw-line {
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: drawLineAnim 2s ease-out forwards infinite;
+    }
+
+    @keyframes drawLineAnim {
+      0% { stroke-dashoffset: 100; opacity: 0; }
+      50% { stroke-dashoffset: 0; opacity: 1; }
+      100% { stroke-dashoffset: 0; opacity: 0; }
+    }
+  </style>
+<!-- END: Custom Styles -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head>
+<body class="bg-kiwi-dark-grey text-white overflow-hidden font-sans">
+<!-- BEGIN: Splash Main Container -->
+<main class="relative h-screen w-full flex flex-col items-center justify-between px-8 py-16 bg-gradient-animate" data-purpose="splash-screen-layout">
+<!-- Top Spacer for alignment -->
+<div class="h-10"></div>
+<!-- BEGIN: Branding Section -->
+<section class="flex flex-col items-center gap-6" data-purpose="branding">
+<!-- Minimalist Logo with Animation -->
+<div class="relative w-32 h-32 flex items-center justify-center bg-white/5 rounded-[2rem] border border-white/10 shadow-2xl backdrop-blur-sm" data-purpose="logo-container">
+<!-- Pulse Effect for 'Wealth' Icon - Using Kiwi Accent -->
+<div class="absolute inset-0 bg-kiwi-neon/10 rounded-[2rem] animate-pulse-slow"></div>
+<!-- SVG Logo: Abstract Rising Line & Shield -->
+<svg class="w-20 h-20 text-white/90" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<!-- Shield/Wealth Icon -->
+<path class="opacity-80" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+<!-- Rising Line Graph - Using Kiwi Neon -->
+<path class="draw-line text-kiwi-neon" d="M8 14l3-3 3 3 2-2"></path>
+</svg>
+</div>
+<!-- App Name and Tagline -->
+<div class="text-center">
+<h1 class="text-4xl font-extrabold tracking-tight text-white mb-2">
+          FinFlow<span class="text-kiwi-neon">.</span>
+</h1>
+<p class="text-white/60 text-lg font-light">
+          Your future wealth, predicted.
+        </p>
+</div>
+</section>
+<!-- END: Branding Section -->
+<!-- BEGIN: Interaction Section -->
+<section class="w-full max-w-sm flex flex-col items-center gap-4" data-purpose="onboarding-controls">
+<!-- Primary Action Button - Neon Kiwi Green -->
+<button class="w-full bg-kiwi-neon text-kiwi-dark-grey font-bold py-4 rounded-kiwi-full shadow-xl hover:brightness-110 transition-all active:scale-95 duration-200" data-purpose="get-started-button" id="btn-get-started">
+        Get Started
+      </button>
+<!-- Secondary Link -->
+<button class="text-white/50 text-sm font-medium py-2 hover:text-white transition-colors" data-purpose="login-link">
+        Already have an account? <span class="text-kiwi-neon font-bold">Log In</span>
+</button>
+</section>
+<!-- END: Interaction Section -->
+<!-- Decorative Bottom Gradient for Depth -->
+<div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>
+<button aria-label="Toggle Theme" class="absolute top-8 right-8 p-3 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 transition-all text-kiwi-neon flex items-center justify-center" id="theme-toggle">
+<span class="material-symbols-outlined" id="theme-icon">light_mode</span>
+</button></main>
+<!-- END: Splash Main Container -->
+<!-- BEGIN: Interactivity Script -->
+<script data-purpose="navigation-logic">
+    document.getElementById('btn-get-started').addEventListener('click', () => {
+      // Basic haptic feel via scale class in CSS (active:scale-95)
+      // Implementation of navigation logic would go here
+      console.log('Navigating to onboarding flow...');
+    });
+  </script>
+<!-- END: Interactivity Script -->
+<script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const body = document.body;
+
+    themeToggle.addEventListener('click', () => {
+      const isLight = body.classList.toggle('bg-white');
+      if (isLight) {
+        body.classList.remove('bg-kiwi-dark-grey', 'text-white');
+        body.classList.add('text-kiwi-dark-grey');
+        themeIcon.textContent = 'dark_mode';
+      } else {
+        body.classList.add('bg-kiwi-dark-grey', 'text-white');
+        body.classList.remove('bg-white', 'text-kiwi-dark-grey');
+        themeIcon.textContent = 'light_mode';
+      }
+    });
+  </script></body></html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Finance Dashboard - Snapshot</title>
+<!-- BEGIN: External Resources -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- END: External Resources -->
+<!-- BEGIN: Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#89eb00',
+              dark: '#6ebc00',
+              light: '#a6f040',
+            },
+            dark: {
+              900: '#1a1a1a', // Slightly darker than requested bg for depth
+              800: '#222222', // Deep dark grey as requested
+              700: '#2e2e2e',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          borderRadius: {
+            'custom': '9999px', // Based on ROUND_FULL from THEME_11
+          }
+        }
+      }
+    }
+  </script>
+<!-- END: Tailwind Configuration -->
+<style data-purpose="custom-overrides">
+    body {
+      background-color: #ffffff;
+      color: #1a1a1a;
+      transition: background-color 0.3s, color 0.3s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body.dark {
+      background-color: #222222;
+      color: #ffffff;
+    }
+    #spendingChart {
+      width: 100%;
+      height: 60px;
+    }
+    .card-rounded {
+      border-radius: 24px;
+    }
+    /* Adjusting card colors for light mode while keeping Kiwi brand */
+    body:not(.dark) .bg-dark-700 {
+      background-color: #f3f4f6;
+      border-color: rgba(0,0,0,0.05);
+    }
+    body:not(.dark) .text-white {
+      color: #1a1a1a !important;
+    }
+    body:not(.dark) .bg-brand\/5 {
+      background-color: rgba(137, 235, 0, 0.1);
+    }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen pb-10 dark">
+<!-- BEGIN: Header -->
+<header class="p-6 flex justify-between items-center" data-purpose="header">
+<div>
+<h1 class="text-xs uppercase tracking-widest text-gray-400 font-semibold">Good Morning</h1>
+<p class="text-lg font-bold">Alex Rivera</p>
+</div>
+<button aria-label="Toggle theme" class="mr-3 p-2 rounded-full hover:bg-white/10 transition-colors" id="theme-toggle">
+<span class="material-symbols-outlined text-gray-400 block dark:hidden">dark_mode</span>
+<span class="material-symbols-outlined text-brand hidden dark:block">light_mode</span>
+</button><div class="w-10 h-10 bg-brand rounded-full flex items-center justify-center font-bold text-black">
+      AR
+    </div>
+</header>
+<!-- END: Header -->
+<main class="px-6 space-y-6">
+<!-- BEGIN: Balance Section -->
+<section class="bg-dark-700 p-6 card-rounded border border-white/5 shadow-xl" data-purpose="balance-card">
+<div class="flex justify-between items-start mb-4">
+<span class="text-sm text-gray-400">Total Balance</span>
+<span class="text-xs px-3 py-1 bg-brand/10 text-brand rounded-full font-medium">+2.4%</span>
+</div>
+<div class="text-3xl font-bold tracking-tight mb-6">
+        ₹12,450.80
+      </div>
+<!-- Mini Spending Chart -->
+<div class="space-y-2">
+<div class="flex justify-between items-end text-[10px] text-gray-500 uppercase font-bold">
+<span>7-Day Spending Trend</span>
+<span class="text-brand">₹842.00 avg</span>
+</div>
+<canvas height="60" id="spendingChart"></canvas>
+</div>
+</section>
+<!-- END: Balance Section -->
+<!-- BEGIN: Quick Actions -->
+<section class="grid grid-cols-2 gap-4" data-purpose="quick-actions">
+<!-- Add Transaction -->
+<button class="flex flex-col items-center justify-center bg-brand hover:bg-brand-dark text-black p-4 rounded-3xl transition-colors group">
+<div class="mb-2 bg-black/10 p-2 rounded-full group-active:scale-95 transition-transform">
+<svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-sm font-bold">Add Transaction</span>
+</button>
+<!-- Transfer -->
+<button class="flex flex-col items-center justify-center bg-dark-700 hover:bg-dark-800 text-white p-4 rounded-3xl border border-white/5 transition-colors group">
+<div class="mb-2 bg-brand/10 p-2 rounded-full group-active:scale-95 transition-transform">
+<svg class="h-6 w-6 text-brand" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-sm font-semibold">Transfer</span>
+</button>
+</section>
+<!-- END: Quick Actions -->
+<!-- BEGIN: Forecast Snapshot -->
+<section class="bg-brand/5 border border-brand/20 p-6 card-rounded" data-purpose="forecast-snapshot">
+<div class="flex items-center gap-2 mb-4">
+<svg class="h-5 w-5 text-brand" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<h2 class="text-sm font-bold uppercase tracking-wide text-brand">Forecast Snapshot</h2>
+</div>
+<div class="flex justify-between items-center">
+<div>
+<p class="text-xs text-gray-400 mb-1">Projected Balance (30 Days)</p>
+<p class="text-2xl font-bold text-white">₹14,210.00</p>
+</div>
+<div class="text-right">
+<p class="text-xs text-gray-400 mb-1">Est. Savings</p>
+<p class="text-lg font-semibold text-brand">+₹1,759.20</p>
+</div>
+</div>
+<div class="mt-4 h-1.5 w-full bg-dark-900 rounded-full overflow-hidden">
+<div class="h-full bg-brand w-3/4 rounded-full"></div>
+</div>
+<p class="mt-2 text-[10px] text-gray-500 italic text-center">Based on average recurring income and fixed expenses.</p>
+</section>
+<!-- END: Forecast Snapshot -->
+</main>
+<!-- BEGIN: Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 bg-dark-800/90 backdrop-blur-md border-t border-white/5 px-8 py-3 flex justify-between items-center">
+<button class="text-brand">
+<svg class="h-6 w-6" fill="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path></svg>
+</button>
+<button class="text-gray-500">
+<svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="text-gray-500">
+<svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="text-gray-500">
+<svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</nav>
+<!-- END: Navigation -->
+<!-- BEGIN: Canvas Script -->
+<script data-purpose="canvas-renderer">
+    function drawChart() {
+      const canvas = document.getElementById('spendingChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const parentWidth = canvas.parentElement.offsetWidth;
+      canvas.width = parentWidth;
+      canvas.height = 60;
+
+      const data = [10, 25, 15, 45, 30, 60, 40];
+      const max = Math.max(...data);
+      const step = canvas.width / (data.length - 1);
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#89eb00'; // custom_color (Neon Kiwi)
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      data.forEach((val, i) => {
+        const x = i * step;
+        const y = canvas.height - (val / max * (canvas.height - 10)) - 5;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+
+      ctx.stroke();
+
+      // Create gradient fill
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, 'rgba(137, 235, 0, 0.3)');
+      gradient.addColorStop(1, 'rgba(137, 235, 0, 0)');
+      
+      ctx.lineTo((data.length - 1) * step, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+
+    window.addEventListener('load', drawChart);
+    window.addEventListener('resize', drawChart);
+  </script>
+<!-- END: Canvas Script -->
+<script>
+  const themeToggleBtn = document.getElementById('theme-toggle');
+  themeToggleBtn.addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    // Force chart redraw if needed, though canvas colors are hardcoded currently
+    if (typeof drawChart === 'function') drawChart();
+  });
+</script></body></html>
