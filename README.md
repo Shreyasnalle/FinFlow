@@ -430,3 +430,7 @@ The coach gives educational guidance, not licensed financial advice.
 ## Contributing
 
 Read **[DEVELOPMENT.md](DEVELOPMENT.md)** first: it covers environment setup, running every part of the project, coding rules, how to change the schema or add an agent skill, and the pull-request checklist.
+
+## License
+
+Released under the [MIT License](LICENSE).
