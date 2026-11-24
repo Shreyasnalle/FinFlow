@@ -27,33 +27,18 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 2000),
     );
 
-    _iconOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.0, 0.3, curve: Curves.easeIn),
-      ),
-    );
+    Animation<double> fade(double from, double to) =>
+        Tween<double>(begin: 0, end: 1).animate(
+          CurvedAnimation(
+            parent: _fadeController,
+            curve: Interval(from, to, curve: Curves.easeIn),
+          ),
+        );
 
-    _textOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.3, 0.6, curve: Curves.easeIn),
-      ),
-    );
-
-    _taglineOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.6, 0.8, curve: Curves.easeIn),
-      ),
-    );
-
-    _loadingOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.8, 1.0, curve: Curves.easeIn),
-      ),
-    );
+    _iconOpacity = fade(0.0, 0.3);
+    _textOpacity = fade(0.3, 0.6);
+    _taglineOpacity = fade(0.6, 0.8);
+    _loadingOpacity = fade(0.8, 1.0);
 
     _fadeController.forward();
     _navigateToDestination();
@@ -85,188 +70,144 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
+      backgroundColor: context.bg,
       body: AnimatedBuilder(
         animation: _fadeController,
         builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: isDark
-                    ? [
-                        AppTheme.brandDefault.withValues(alpha: 0.1),
-                        const Color(0xFF0f0f0f),
-                      ]
-                    : [
-                        AppTheme.brandDefault.withValues(alpha: 0.05),
-                        Colors.white,
-                      ],
-              ),
-            ),
-            child: Stack(
-              children: [
-                // Subtle background pattern
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: 0.03,
-                    child: CustomPaint(
-                      painter: _FinancePatternPainter(),
+          return Stack(
+            children: [
+              // Decorative lavender / lime blobs
+              Positioned(
+                top: -80,
+                right: -60,
+                child: Opacity(
+                  opacity: _iconOpacity.value,
+                  child: Container(
+                    width: 240,
+                    height: 240,
+                    decoration: BoxDecoration(
+                      color: context.soft,
+                      shape: BoxShape.circle,
                     ),
                   ),
                 ),
-                // Main content
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // App Icon with fade and scale
-                      Opacity(
-                        opacity: _iconOpacity.value,
-                        child: Transform.scale(
-                          scale: 0.8 + (_iconOpacity.value * 0.2),
-                          child: Container(
-                            width: 120,
-                            height: 120,
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppTheme.brandDefault,
-                                  AppTheme.brandLight,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.all(Radius.circular(30)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color.fromRGBO(0, 123, 85, 0.3),
-                                  blurRadius: 20,
-                                  offset: Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.account_balance_wallet,
-                              size: 60,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                      // App Name with fade
-                      Opacity(
-                        opacity: _textOpacity.value,
-                        child: Text(
-                          'FinFlow',
-                          style: GoogleFonts.poppins(
-                            fontSize: 42,
-                            fontWeight: FontWeight.w900,
-                            color: isDark ? Colors.white : Colors.black87,
-                            letterSpacing: -1.0,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      // Dot
-                      Opacity(
-                        opacity: _textOpacity.value,
-                        child: Text(
-                          '.',
-                          style: GoogleFonts.poppins(
-                            fontSize: 42,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.brandDefault,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Tagline with fade
-                      Opacity(
-                        opacity: _taglineOpacity.value,
-                        child: Text(
-                          'Master Your Finances',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w400,
-                            color: isDark ? Colors.white70 : Colors.black54,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 60),
-                      // Loading Indicator with fade
-                      Opacity(
-                        opacity: _loadingOpacity.value,
-                        child: const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brandDefault),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Opacity(
-                        opacity: _loadingOpacity.value,
-                        child: Text(
-                          'Loading...',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: isDark ? Colors.white54 : Colors.black45,
-                          ),
-                        ),
-                      ),
-                    ],
+              ),
+              Positioned(
+                bottom: -70,
+                left: -50,
+                child: Opacity(
+                  opacity: _iconOpacity.value,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: AppTheme.lime.withValues(alpha: context.isDark ? 0.18 : 0.6),
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Opacity(
+                      opacity: _iconOpacity.value,
+                      child: Transform.scale(
+                        scale: 0.8 + (_iconOpacity.value * 0.2),
+                        child: Container(
+                          width: 112,
+                          height: 112,
+                          decoration: BoxDecoration(
+                            color: AppTheme.blue,
+                            borderRadius: BorderRadius.circular(36),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              const Icon(
+                                Icons.account_balance_wallet_rounded,
+                                size: 52,
+                                color: AppTheme.white,
+                              ),
+                              Positioned(
+                                top: 12,
+                                right: 12,
+                                child: Container(
+                                  width: 26,
+                                  height: 26,
+                                  decoration: const BoxDecoration(
+                                    color: AppTheme.lime,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.north_east_rounded,
+                                      size: 14, color: AppTheme.ink),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 36),
+                    Opacity(
+                      opacity: _textOpacity.value,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'FinFlow',
+                            style: GoogleFonts.urbanist(
+                              fontSize: 44,
+                              fontWeight: FontWeight.w800,
+                              color: context.fg,
+                              letterSpacing: -1.0,
+                            ),
+                          ),
+                          Text(
+                            '.',
+                            style: GoogleFonts.urbanist(
+                              fontSize: 44,
+                              fontWeight: FontWeight.w800,
+                              color: context.accent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Opacity(
+                      opacity: _taglineOpacity.value,
+                      child: Text(
+                        'Master your finances',
+                        style: GoogleFonts.urbanist(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: context.fgMuted,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 56),
+                    Opacity(
+                      opacity: _loadingOpacity.value,
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(context.accent),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
-}
-
-class _FinancePatternPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.grey.withValues(alpha: 0.1)
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-
-    // Draw subtle grid lines
-    for (double i = 0; i < size.width; i += 50) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += 50) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-
-    // Draw subtle currency symbols
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: '₹',
-        style: TextStyle(
-          color: Colors.grey.withValues(alpha: 0.05),
-          fontSize: 20,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-
-    for (int i = 0; i < 5; i++) {
-      for (int j = 0; j < 5; j++) {
-        textPainter.layout();
-        final x = (size.width / 6) * (i + 1);
-        final y = (size.height / 6) * (j + 1);
-        textPainter.paint(canvas, Offset(x - 10, y - 10));
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

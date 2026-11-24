@@ -1,16 +1,7 @@
-import 'package:hive/hive.dart';
-
-part 'financial_goal.g.dart';
-
-@HiveType(typeId: 1)
 class FinancialGoal {
-  @HiveField(0)
   final String id;
-  @HiveField(1)
   final String title;
-  @HiveField(2)
   final double targetAmount;
-  @HiveField(3)
   final double savedAmount;
 
   FinancialGoal({

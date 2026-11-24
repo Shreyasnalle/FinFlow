@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
 import 'main_screen.dart';
+import '../widgets/tap_scale.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -81,9 +83,8 @@ class _SignUpScreenState extends State<SignUpScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
+      backgroundColor: context.bg,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeController,
@@ -95,59 +96,64 @@ class _SignUpScreenState extends State<SignUpScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Back button
-                  IconButton(
-                    padding: EdgeInsets.zero,
-                    alignment: Alignment.centerLeft,
-                    icon: const Icon(Icons.arrow_back_rounded),
-                    onPressed: () => Navigator.pop(context),
+                  TapScale(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                          color: context.surface, shape: BoxShape.circle),
+                      child: Icon(Icons.arrow_back_rounded, color: context.fg),
+                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
 
                   // Header
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppTheme.brandDefault.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.person_add_rounded,
-                          color: AppTheme.brandDefault,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Create Account',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
-                                  ?.copyWith(fontWeight: FontWeight.bold),
+                              'Create\nAccount',
+                              style: GoogleFonts.urbanist(
+                                fontSize: 38,
+                                height: 1.1,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.8,
+                                color: context.fg,
+                              ),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 10),
                             Text(
                               'Set up your profile & security PIN',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(fontSize: 14),
+                              style: GoogleFonts.urbanist(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: context.fgMuted,
+                              ),
                             ),
                           ],
                         ),
+                      ),
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: const BoxDecoration(
+                          color: AppTheme.lime,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.person_add_rounded,
+                            color: AppTheme.ink, size: 24),
                       ),
                     ],
                   ),
                   const SizedBox(height: 36),
 
                   // --- Profile Section ---
-                  _SectionLabel(label: 'PROFILE', isDark: isDark),
+                  const _SectionLabel(label: 'PROFILE'),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _nameController,
@@ -206,13 +212,15 @@ class _SignUpScreenState extends State<SignUpScreen>
                   const SizedBox(height: 32),
 
                   // --- Security Section ---
-                  _SectionLabel(label: 'SECURITY PIN', isDark: isDark),
+                  const _SectionLabel(label: 'SECURITY PIN'),
                   const SizedBox(height: 4),
                   Text(
                     'You\'ll use this 4-digit PIN to unlock the app.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isDark ? Colors.white54 : Colors.black45,
-                        ),
+                    style: GoogleFonts.urbanist(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: context.fgMuted,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -272,30 +280,58 @@ class _SignUpScreenState extends State<SignUpScreen>
                   const SizedBox(height: 40),
 
                   // Submit
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                  TapScale(
+                    onTap: _isLoading ? null : _submit,
+                    child: Container(
+                      height: 64,
+                      padding: const EdgeInsets.only(left: 28, right: 8),
+                      decoration: BoxDecoration(
+                        color: context.cta,
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusPill),
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.black,
-                              ),
-                            )
-                          : const Text(
-                              'Create Account',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Center(
+                              child: _isLoading
+                                  ? SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: context.onCta,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Create Account',
+                                      style: GoogleFonts.urbanist(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                        color: context.onCta,
+                                      ),
+                                    ),
                             ),
+                          ),
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: context.isDark
+                                  ? AppTheme.ink
+                                  : AppTheme.lime,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.chevron_right_rounded,
+                              size: 28,
+                              color: context.isDark
+                                  ? AppTheme.lime
+                                  : AppTheme.ink,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -311,18 +347,17 @@ class _SignUpScreenState extends State<SignUpScreen>
 
 class _SectionLabel extends StatelessWidget {
   final String label;
-  final bool isDark;
-  const _SectionLabel({required this.label, required this.isDark});
+  const _SectionLabel({required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: TextStyle(
+      style: GoogleFonts.urbanist(
         fontSize: 12,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w800,
         letterSpacing: 1.2,
-        color: isDark ? Colors.white38 : Colors.black38,
+        color: context.fgFaint,
       ),
     );
   }

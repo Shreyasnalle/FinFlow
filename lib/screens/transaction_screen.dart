@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_transaction_sheet.dart';
+import '../widgets/tap_scale.dart';
 
 class TransactionScreen extends StatelessWidget {
   const TransactionScreen({super.key});
@@ -24,14 +26,17 @@ class TransactionScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('All Transactions')),
+      appBar: AppBar(title: const Text('All transactions')),
       body: provider.transactions.isEmpty
-          ? const Center(child: Text("No transactions available.", style: TextStyle(color: AppTheme.textMuted)))
+          ? Center(
+              child: Text('No transactions available.',
+                  style: GoogleFonts.urbanist(color: context.fgMuted, fontSize: 15, fontWeight: FontWeight.w500)),
+            )
           : ListView.separated(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
               itemCount: provider.transactions.length,
-              separatorBuilder: (context, index) => const Divider(color: AppTheme.borderColor),
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final t = provider.transactions[index];
                 return Dismissible(
@@ -39,18 +44,18 @@ class TransactionScreen extends StatelessWidget {
                   direction: DismissDirection.endToStart,
                   background: Container(
                     alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
+                    padding: const EdgeInsets.only(right: 24),
                     decoration: BoxDecoration(
-                      color: Colors.redAccent.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(16),
+                      color: AppTheme.blue,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusTile),
                     ),
-                    child: const Icon(Icons.delete_outline, color: Colors.white),
+                    child: const Icon(Icons.delete_outline, color: AppTheme.white),
                   ),
                   confirmDismiss: (_) async {
                     return await showDialog<bool>(
                           context: context,
                           builder: (ctx) => AlertDialog(
-                            title: const Text('Delete Transaction'),
+                            title: const Text('Delete transaction'),
                             content: const Text('Do you want to remove this transaction?'),
                             actions: [
                               TextButton(
@@ -59,7 +64,7 @@ class TransactionScreen extends StatelessWidget {
                               ),
                               TextButton(
                                 onPressed: () => Navigator.pop(ctx, true),
-                                child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                child: const Text('Delete'),
                               ),
                             ],
                           ),
@@ -72,32 +77,59 @@ class TransactionScreen extends StatelessWidget {
                       const SnackBar(content: Text('Transaction deleted')),
                     );
                   },
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: t.isIncome ? AppTheme.accent.withValues(alpha: 0.1) : AppTheme.errorRed.withValues(alpha: 0.1),
-                      child: Icon(
-                        t.isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                        color: t.isIncome ? AppTheme.accent : AppTheme.errorRed,
-                      ),
-                    ),
-                    title: Text(t.category, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(DateFormat.yMMMd().format(t.date), style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
-                        if (t.note.isNotEmpty)
-                          Text(t.note, style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
-                      ],
-                    ),
-                    trailing: Text(
-                      '${t.isIncome ? '+' : '-'}${formatCurrency.format(t.amount)}',
-                      style: TextStyle(
-                        color: t.isIncome ? AppTheme.accent : AppTheme.errorRed,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                  child: TapScale(
                     onTap: () => showEditTransaction(t),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: context.surface,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusTile),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: t.isIncome ? AppTheme.lime : AppTheme.lavender,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              t.isIncome ? Icons.south_west : Icons.north_east,
+                              color: AppTheme.ink,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(t.category,
+                                    style: GoogleFonts.urbanist(fontWeight: FontWeight.w700, fontSize: 15, color: context.fg)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  t.note.isNotEmpty
+                                      ? '${DateFormat.yMMMd().format(t.date)} · ${t.note}'
+                                      : DateFormat.yMMMd().format(t.date),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.urbanist(fontSize: 12, fontWeight: FontWeight.w500, color: context.fgMuted),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '${t.isIncome ? '+' : '-'}${formatCurrency.format(t.amount)}',
+                            style: GoogleFonts.urbanist(
+                              color: t.isIncome ? context.fg : context.accent,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },

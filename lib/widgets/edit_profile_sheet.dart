@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
-
+import '../theme/app_theme.dart';
+import 'form_error.dart';
+import 'tap_scale.dart';
 
 class EditProfileSheet extends StatefulWidget {
   const EditProfileSheet({super.key});
@@ -11,6 +14,7 @@ class EditProfileSheet extends StatefulWidget {
 }
 
 class _EditProfileSheetState extends State<EditProfileSheet> {
+  String? _error;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _professionController = TextEditingController();
   final TextEditingController _mobileController = TextEditingController();
@@ -29,7 +33,10 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
 
   void _submit() {
     final name = _nameController.text.trim();
-    if (name.isEmpty) return; // Name is required
+    if (name.isEmpty) {
+      setState(() => _error = 'Your name can\'t be empty.');
+      return;
+    }
 
     Provider.of<FinanceProvider>(context, listen: false).saveUserProfile(
       name: name,
@@ -51,49 +58,96 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+        color: context.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white24 : Colors.black26, 
-              borderRadius: BorderRadius.circular(2)
+          Center(
+            child: Container(
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(
+                color: context.soft,
+                borderRadius: BorderRadius.circular(3),
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Edit Profile', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(
+            'Edit Profile',
+            style: GoogleFonts.urbanist(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.5,
+              color: context.fg,
+            ),
+          ),
           const SizedBox(height: 24),
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Full Name', hintText: 'John Doe'),
+            decoration: const InputDecoration(
+                labelText: 'Full Name', hintText: 'John Doe'),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           TextField(
             controller: _professionController,
-            decoration: const InputDecoration(labelText: 'Profession', hintText: 'Software Engineer'),
+            decoration: const InputDecoration(
+                labelText: 'Profession', hintText: 'Software Engineer'),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           TextField(
             controller: _mobileController,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(labelText: 'Phone Number', hintText: '+91 1234567890'),
+            decoration: const InputDecoration(
+                labelText: 'Phone Number', hintText: '+91 1234567890'),
           ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _submit,
-              child: const Text('Save Changes'),
+          FormError(_error),
+          const SizedBox(height: 28),
+          TapScale(
+            onTap: _submit,
+            child: Container(
+              height: 60,
+              padding: const EdgeInsets.only(left: 28, right: 8),
+              decoration: BoxDecoration(
+                color: context.cta,
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'Save Changes',
+                        style: GoogleFonts.urbanist(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: context.onCta,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: context.isDark ? AppTheme.ink : AppTheme.lime,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_rounded,
+                      size: 24,
+                      color: context.isDark ? AppTheme.lime : AppTheme.ink,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

@@ -7,7 +7,6 @@
 /.flutter-plugins
 /.idea/
 .vscode/
-pubspec.lock
 
 # Android
 /android/.gradle
@@ -87,3 +86,31 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# --- Secrets & local config (never commit) ---
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+key.properties
+**/key.properties
+*.jks
+*.keystore
+*.pem
+google-services.json
+GoogleService-Info.plist
+android/local.properties
+
+# --- Python agent (agent/) ---
+agent/.venv/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- Tooling / build output ---
+.claude/
+*.apk
+*.aab

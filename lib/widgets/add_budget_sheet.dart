@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
+import 'form_error.dart';
 
 class AddBudgetSheet extends StatefulWidget {
   const AddBudgetSheet({super.key});
@@ -12,6 +14,7 @@ class AddBudgetSheet extends StatefulWidget {
 }
 
 class _AddBudgetSheetState extends State<AddBudgetSheet> {
+  String? _error;
   final _categoryController = TextEditingController();
   final _budgetController = TextEditingController();
   String? _selectedCategory;
@@ -44,9 +47,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     final budget = double.tryParse(_budgetController.text.trim());
 
     if (category.isEmpty || budget == null || budget <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid category and budget')),
-      );
+      setState(() => _error = category.isEmpty ? 'Choose or type a category.' : 'Enter a budget greater than 0.');
       return;
     }
 
@@ -59,67 +60,60 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   Widget build(BuildContext context) {
     final provider = Provider.of<FinanceProvider>(context);
     final currencySymbol = provider.currencySymbol;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final existing = provider.categoryBudgets.keys.toSet();
 
-    // Filter out categories that already have a budget
     final available = _suggestedCategories
         .where((c) => !existing.contains(c))
         .toList();
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-          24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+          24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(32),
-          topRight: Radius.circular(32),
-        ),
+        color: context.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white24 : Colors.black26,
-              borderRadius: BorderRadius.circular(2),
+          Center(
+            child: Container(
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(
+                color: context.fgFaint,
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Set Category Budget',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
+          Text('Set category budget',
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 6),
           Text(
             'Track spending against a monthly limit',
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.white54 : Colors.black54,
+            style: GoogleFonts.urbanist(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: context.fgMuted,
             ),
           ),
           const SizedBox(height: 24),
 
-          // Suggested category chips
           if (available.isNotEmpty) ...[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'POPULAR CATEGORIES',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: isDark ? Colors.white38 : Colors.black38,
-                ),
+            Text(
+              'POPULAR CATEGORIES',
+              style: GoogleFonts.urbanist(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+                color: context.fgMuted,
               ),
             ),
             const SizedBox(height: 10),
             SizedBox(
-              height: 40,
+              height: 44,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: available.length,
@@ -130,14 +124,14 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                   return ChoiceChip(
                     label: Text(cat),
                     selected: isSelected,
-                    selectedColor:
-                        AppTheme.brandDefault.withValues(alpha: 0.2),
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? AppTheme.brandDefault
-                          : (isDark ? Colors.white70 : Colors.black87),
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                    showCheckmark: false,
+                    selectedColor: AppTheme.lime,
+                    backgroundColor: context.surface,
+                    side: BorderSide.none,
+                    shape: const StadiumBorder(),
+                    labelStyle: GoogleFonts.urbanist(
+                      color: isSelected ? AppTheme.ink : context.fg,
+                      fontWeight: FontWeight.w700,
                     ),
                     onSelected: (v) {
                       setState(() {
@@ -152,10 +146,11 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             const SizedBox(height: 16),
           ],
 
-          // Custom category input
           TextField(
             controller: _categoryController,
             textCapitalization: TextCapitalization.words,
+            style: GoogleFonts.urbanist(
+                fontWeight: FontWeight.w600, color: context.fg),
             decoration: InputDecoration(
               labelText: 'Or type a custom category',
               hintText: 'e.g. Pet Care',
@@ -174,34 +169,45 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
               }
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // Budget amount
           TextField(
             controller: _budgetController,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: GoogleFonts.urbanist(
+                fontWeight: FontWeight.w600, color: context.fg),
             decoration: InputDecoration(
-              labelText: 'Monthly Budget ($currencySymbol)',
+              labelText: 'Monthly budget ($currencySymbol)',
               prefixText: '$currencySymbol ',
               prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
             ),
           ),
+          FormError(_error),
           const SizedBox(height: 28),
 
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _submit,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text(
-                'Set Budget',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              child: Row(
+                children: [
+                  const SizedBox(width: 32),
+                  const Expanded(
+                    child: Text('Set budget', textAlign: TextAlign.center),
+                  ),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: context.isDark ? AppTheme.ink : AppTheme.lime,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.arrow_forward_rounded,
+                        size: 18,
+                        color: context.isDark ? AppTheme.lime : AppTheme.ink),
+                  ),
+                ],
               ),
             ),
           ),

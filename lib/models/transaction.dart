@@ -1,22 +1,10 @@
-import 'package:hive/hive.dart';
-
-part 'transaction.g.dart';
-
-@HiveType(typeId: 0)
 class Transaction {
-  @HiveField(0)
   final String id;
-  @HiveField(1)
   final double amount;
-  @HiveField(2)
   final DateTime date;
-  @HiveField(3)
   final String category;
-  @HiveField(4)
   final String note;
-  @HiveField(5)
   final bool isIncome;
-  @HiveField(6)
   final bool isInvestment;
 
   Transaction({

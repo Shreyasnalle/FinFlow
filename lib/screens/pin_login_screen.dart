@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
@@ -84,136 +85,147 @@ class _PinLoginScreenState extends State<PinLoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = context.isDark;
     final provider = Provider.of<FinanceProvider>(context, listen: false);
 
     return Scaffold(
+      backgroundColor: context.bg,
       body: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(flex: 2),
+        // Scrolls on short phones instead of overflowing; fills the screen otherwise.
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  children: [
+                    const Spacer(flex: 2),
 
-            // Avatar & greeting
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppTheme.brandDefault.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  provider.userName.isNotEmpty
-                      ? provider.userName[0].toUpperCase()
-                      : 'U',
-                  style: const TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.brandDefault,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Welcome back,',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDark ? Colors.white54 : Colors.black54,
-                    fontSize: 16,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              provider.userName,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 32),
-
-            // PIN dots
-            AnimatedBuilder(
-              animation: _shakeAnim,
-              builder: (context, child) {
-                final dx = _shakeAnim.value *
-                    8 *
-                    (_shakeController.isAnimating
-                        ? ((_shakeAnim.value * 10).toInt() % 2 == 0 ? 1 : -1)
-                        : 0);
-                return Transform.translate(
-                  offset: Offset(dx, 0),
-                  child: child,
-                );
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(4, (i) {
-                  final filled = i < _digits.length;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 10),
-                    width: filled ? 18 : 14,
-                    height: filled ? 18 : 14,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: filled
-                          ? AppTheme.brandDefault
-                          : (isDark
-                              ? Colors.white.withValues(alpha: 0.12)
-                              : Colors.black.withValues(alpha: 0.08)),
-                      border: filled
-                          ? null
-                          : Border.all(
-                              color: isDark ? Colors.white24 : Colors.black26,
-                              width: 1.5,
-                            ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Error text
-            AnimatedOpacity(
-              opacity: _error.isNotEmpty ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: Text(
-                _error,
-                style: const TextStyle(
-                  color: AppTheme.errorRed,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-
-            // Forgot PIN link
-            AnimatedOpacity(
-              opacity: _showForgotPin ? 1 : 0,
-              duration: const Duration(milliseconds: 300),
-              child: _showForgotPin
-                  ? TextButton(
-                      onPressed: () => _showForgotPinDialog(context, provider),
-                      child: const Text(
-                        'Forgot PIN?',
-                        style: TextStyle(
-                          color: AppTheme.brandDefault,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
+                    // Avatar & greeting
+                    Container(
+                      width: 84,
+                      height: 84,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.lime,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          provider.userName.isNotEmpty
+                              ? provider.userName[0].toUpperCase()
+                              : 'U',
+                          style: GoogleFonts.urbanist(
+                            fontSize: 38,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.ink,
+                          ),
                         ),
                       ),
-                    )
-                  : const SizedBox(height: 48),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Welcome back,',
+                      style: GoogleFonts.urbanist(
+                        color: context.fgMuted,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      provider.userName,
+                      style: GoogleFonts.urbanist(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
+                        color: context.fg,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // PIN dots
+                    AnimatedBuilder(
+                      animation: _shakeAnim,
+                      builder: (context, child) {
+                        final dx = _shakeAnim.value *
+                            8 *
+                            (_shakeController.isAnimating
+                                ? ((_shakeAnim.value * 10).toInt() % 2 == 0
+                                    ? 1
+                                    : -1)
+                                : 0);
+                        return Transform.translate(
+                          offset: Offset(dx, 0),
+                          child: child,
+                        );
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(4, (i) {
+                          final filled = i < _digits.length;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.symmetric(horizontal: 10),
+                            width: filled ? 18 : 14,
+                            height: filled ? 18 : 14,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: filled ? context.accent : context.surface,
+                              border: filled
+                                  ? null
+                                  : Border.all(
+                                      color: context.border, width: 1.5),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Error text
+                    AnimatedOpacity(
+                      opacity: _error.isNotEmpty ? 1 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Text(
+                        _error,
+                        style: GoogleFonts.urbanist(
+                          color: AppTheme.blue,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+
+                    // Forgot PIN link
+                    AnimatedOpacity(
+                      opacity: _showForgotPin ? 1 : 0,
+                      duration: const Duration(milliseconds: 300),
+                      child: _showForgotPin
+                          ? TextButton(
+                              onPressed: () =>
+                                  _showForgotPinDialog(context, provider),
+                              child: Text(
+                                'Forgot PIN?',
+                                style: GoogleFonts.urbanist(
+                                  color: context.accent,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            )
+                          : const SizedBox(height: 48),
+                    ),
+
+                    const Spacer(flex: 1),
+
+                    // Number pad
+                    _buildNumPad(isDark),
+
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
             ),
-
-            const Spacer(flex: 1),
-
-            // Number pad
-            _buildNumPad(isDark),
-
-            const SizedBox(height: 32),
-          ],
+          ),
         ),
       ),
     );
@@ -245,7 +257,7 @@ class _PinLoginScreenState extends State<PinLoginScreen>
                     onTap: _onBackspace,
                     child: Icon(
                       Icons.backspace_outlined,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                      color: context.fg,
                       size: 22,
                     ),
                   );
@@ -255,10 +267,10 @@ class _PinLoginScreenState extends State<PinLoginScreen>
                   onTap: () => _onDigit(key),
                   child: Text(
                     key,
-                    style: TextStyle(
+                    style: GoogleFonts.urbanist(
                       fontSize: 28,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      color: context.fg,
                     ),
                   ),
                 );
@@ -284,17 +296,31 @@ class _PinLoginScreenState extends State<PinLoginScreen>
         builder: (ctx, setDialogState) {
           return AlertDialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
             ),
             title: Row(
               children: [
-                Icon(
-                  step == 1 ? Icons.verified_user_outlined : Icons.lock_reset_rounded,
-                  color: AppTheme.brandDefault,
-                  size: 24,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.lime,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    step == 1
+                        ? Icons.verified_user_outlined
+                        : Icons.lock_reset_rounded,
+                    color: AppTheme.ink,
+                    size: 22,
+                  ),
                 ),
-                const SizedBox(width: 10),
-                Text(step == 1 ? 'Verify Identity' : 'Set New PIN'),
+                const SizedBox(width: 12),
+                Text(
+                  step == 1 ? 'Verify Identity' : 'Set New PIN',
+                  style: GoogleFonts.urbanist(
+                      fontWeight: FontWeight.w700, color: ctx.fg),
+                ),
               ],
             ),
             content: step == 1
@@ -304,11 +330,10 @@ class _PinLoginScreenState extends State<PinLoginScreen>
                     children: [
                       Text(
                         'Enter your registered details to reset your PIN.',
-                        style: TextStyle(
+                        style: GoogleFonts.urbanist(
                           fontSize: 13,
-                          color: Theme.of(ctx).brightness == Brightness.dark
-                              ? Colors.white54
-                              : Colors.black54,
+                          fontWeight: FontWeight.w500,
+                          color: ctx.fgMuted,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -443,9 +468,12 @@ class _PinLoginScreenState extends State<PinLoginScreen>
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Text('PIN reset successfully ✓'),
+                        content: Text('PIN reset successfully ✓',
+                            style: GoogleFonts.urbanist(
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.ink)),
                         behavior: SnackBarBehavior.floating,
-                        backgroundColor: AppTheme.brandDefault,
+                        backgroundColor: AppTheme.lime,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -483,16 +511,14 @@ class _NumPadKey extends StatelessWidget {
           onTap();
         },
         borderRadius: BorderRadius.circular(36),
-        splashColor: AppTheme.brandDefault.withValues(alpha: 0.2),
-        highlightColor: AppTheme.brandDefault.withValues(alpha: 0.08),
+        splashColor: AppTheme.lime.withValues(alpha: 0.5),
+        highlightColor: AppTheme.lime.withValues(alpha: 0.25),
         child: Container(
           width: 72,
           height: 72,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.black.withValues(alpha: 0.04),
+            color: context.surface,
           ),
           child: Center(child: child),
         ),

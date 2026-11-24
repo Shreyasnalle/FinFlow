@@ -1,12 +1,16 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../database/demo_seed.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/edit_profile_sheet.dart';
 import '../services/pdf_export_service.dart';
 import 'welcome_screen.dart';
+import '../widgets/tap_scale.dart';
+import '../widgets/smooth_wheel.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,42 +20,108 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _notificationsEnabled = true;
-  bool _biometricLock = false;
+
+  static String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return 'U';
+    if (parts.length == 1) return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<FinanceProvider>(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: context.bg,
       appBar: AppBar(
-        title: const Text(
+        toolbarHeight: 72,
+        title: Text(
           'Settings',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: GoogleFonts.urbanist(
+            fontSize: 30,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+            color: context.fg,
+          ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Center(
+            child: TapScale(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                    color: context.surface, shape: BoxShape.circle),
+                child: Icon(Icons.arrow_back_rounded, color: context.fg),
+              ),
+            ),
+          ),
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
+        children: [SmoothWheel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // ── Profile card ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.blue,
+                borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: const BoxDecoration(color: AppTheme.lime, shape: BoxShape.circle),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _initials(provider.userName),
+                      style: GoogleFonts.urbanist(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.ink),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          provider.userName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.urbanist(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.white),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          provider.userProfession.isNotEmpty ? provider.userProfession : provider.userMobile,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.urbanist(
+                              fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.white.withValues(alpha: 0.8)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // ── Account ──
-          _SectionHeader(title: 'Account', isDark: isDark),
+          _SectionHeader(title: 'Account'),
           _SettingsTile(
             icon: Icons.person_outline_rounded,
-            iconBg: AppTheme.brandDefault.withValues(alpha: 0.15),
-            iconColor: AppTheme.brandDefault,
             title: 'Edit Profile',
             subtitle: provider.userName,
             onTap: () => _showEditProfile(context),
           ),
           _SettingsTile(
             icon: Icons.lock_outline_rounded,
-            iconBg: Colors.blue.withValues(alpha: 0.12),
-            iconColor: Colors.blue,
             title: 'Change PIN',
             subtitle: 'Update your security PIN',
             onTap: () => _showChangePinDialog(context, provider),
@@ -60,19 +130,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const _SettingsDivider(),
 
           // ── Appearance ──
-          _SectionHeader(title: 'Appearance', isDark: isDark),
-          _SettingsTile(
-            icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-            iconBg: Colors.deepPurple.withValues(alpha: 0.12),
-            iconColor: Colors.deepPurple,
-            title: 'Theme',
-            subtitle: _themeLabel(provider.themeMode),
-            onTap: () => _showThemePicker(context, provider),
-          ),
+          _SectionHeader(title: 'Appearance'),
           _SettingsTile(
             icon: Icons.currency_exchange_rounded,
-            iconBg: Colors.teal.withValues(alpha: 0.12),
-            iconColor: Colors.teal,
             title: 'Currency',
             subtitle: provider.currency,
             onTap: () => _showCurrencyPicker(context, provider),
@@ -80,35 +140,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const _SettingsDivider(),
 
-          // ── Notifications ──
-          _SectionHeader(title: 'Notifications', isDark: isDark),
-          _SettingsSwitchTile(
-            icon: Icons.notifications_outlined,
-            iconBg: Colors.orange.withValues(alpha: 0.12),
-            iconColor: Colors.orange,
-            title: 'Push Notifications',
-            subtitle: 'Daily spending summaries & alerts',
-            value: _notificationsEnabled,
-            onChanged: (v) => setState(() => _notificationsEnabled = v),
-          ),
-
-          const _SettingsDivider(),
-
           // ── Security & Privacy ──
-          _SectionHeader(title: 'Security & Privacy', isDark: isDark),
-          _SettingsSwitchTile(
-            icon: Icons.fingerprint_rounded,
-            iconBg: Colors.red.withValues(alpha: 0.12),
-            iconColor: Colors.red,
-            title: 'Biometric Unlock',
-            subtitle: 'Use fingerprint to unlock the app',
-            value: _biometricLock,
-            onChanged: (v) => setState(() => _biometricLock = v),
-          ),
+          _SectionHeader(title: 'Security & Privacy'),
           _SettingsTile(
             icon: Icons.privacy_tip_outlined,
-            iconBg: Colors.indigo.withValues(alpha: 0.12),
-            iconColor: Colors.indigo,
             title: 'Privacy Policy',
             subtitle: 'How we handle your data',
             onTap: () => _showInfoDialog(
@@ -123,11 +158,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const _SettingsDivider(),
 
           // ── Data ──
-          _SectionHeader(title: 'Data Management', isDark: isDark),
+          _SectionHeader(title: 'Data Management'),
           _SettingsTile(
             icon: Icons.download_rounded,
-            iconBg: Colors.green.withValues(alpha: 0.12),
-            iconColor: Colors.green,
             title: 'Export Data',
             subtitle: 'Download your financial data',
             onTap: () {
@@ -136,76 +169,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _SettingsTile(
             icon: Icons.delete_sweep_outlined,
-            iconBg: Colors.red.withValues(alpha: 0.12),
-            iconColor: Colors.red,
             title: 'Clear All Data',
             subtitle: 'Permanently delete all transactions & goals',
             onTap: () => _showClearDataDialog(context, provider),
           ),
+          if (DemoSeed.enabled && provider.userName == DemoSeed.userName)
+            _SettingsTile(
+              icon: Icons.science_outlined,
+              title: 'Reload demo data',
+              subtitle: 'Regenerate 3 years of sample history ending today',
+              onTap: () async {
+                await provider.loadDemoData();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Demo data reloaded')),
+                );
+              },
+            ),
 
           const _SettingsDivider(),
 
           // ── About ──
-          _SectionHeader(title: 'About', isDark: isDark),
+          _SectionHeader(title: 'About'),
           _SettingsTile(
             icon: Icons.info_outline_rounded,
-            iconBg: Colors.blueGrey.withValues(alpha: 0.12),
-            iconColor: Colors.blueGrey,
             title: 'App Version',
             subtitle: 'v1.0.0 (Build 1)',
-            onTap: () {},
           ),
-          _SettingsTile(
-            icon: Icons.star_outline_rounded,
-            iconBg: Colors.amber.withValues(alpha: 0.12),
-            iconColor: Colors.amber.shade700,
-            title: 'Rate This App',
-            subtitle: 'Leave a review on the Play Store',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Thank you for your support! 🎉'),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              );
-            },
-          ),
-          _SettingsTile(
-            icon: Icons.share_outlined,
-            iconBg: Colors.cyan.withValues(alpha: 0.12),
-            iconColor: Colors.cyan,
-            title: 'Share App',
-            subtitle: 'Invite friends to try FinFlow',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Share link copied!'),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              );
-            },
-          ),
-          _SettingsTile(
-            icon: Icons.help_outline_rounded,
-            iconBg: Colors.purple.withValues(alpha: 0.12),
-            iconColor: Colors.purple,
-            title: 'Help & Support',
-            subtitle: 'FAQs and contact us',
-            onTap: () => _showInfoDialog(
-              context,
-              'Help & Support',
-              'For questions or feedback, reach out to:\n\n'
-                  '📧 support@finflow.app\n\n'
-                  'We typically respond within 24 hours.',
-            ),
-          ),
-
           const _SettingsDivider(),
 
           // ── Log Out ──
@@ -217,25 +207,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: OutlinedButton.icon(
                 onPressed: () => _showLogoutDialog(context, provider),
                 icon: const Icon(Icons.logout_rounded, size: 20),
-                label: const Text(
+                label: Text(
                   'Log Out',
-                  style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.urbanist(
+                      fontSize: 16, fontWeight: FontWeight.w700),
                 ),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: const BorderSide(color: Colors.redAccent),
-                  foregroundColor: Colors.redAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  side: BorderSide(color: context.accent, width: 1.5),
+                  foregroundColor: context.accent,
+                  shape: const StadiumBorder(),
                 ),
               ),
             ),
           ),
 
           const SizedBox(height: 32),
-        ],
+        ]))],
       ),
     );
   }
@@ -251,86 +239,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  String _themeLabel(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return 'Light';
-      case ThemeMode.dark:
-        return 'Dark';
-      case ThemeMode.system:
-        return 'System Default';
-    }
-  }
-
-  void _showThemePicker(BuildContext context, FinanceProvider provider) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black26,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Choose Theme',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            _ThemeOption(
-              icon: Icons.brightness_auto_rounded,
-              label: 'System Default',
-              selected: provider.themeMode == ThemeMode.system,
-              onTap: () {
-                provider.setThemeMode(ThemeMode.system);
-                Navigator.pop(context);
-              },
-            ),
-            _ThemeOption(
-              icon: Icons.light_mode_rounded,
-              label: 'Light',
-              selected: provider.themeMode == ThemeMode.light,
-              onTap: () {
-                provider.setThemeMode(ThemeMode.light);
-                Navigator.pop(context);
-              },
-            ),
-            _ThemeOption(
-              icon: Icons.dark_mode_rounded,
-              label: 'Dark',
-              selected: provider.themeMode == ThemeMode.dark,
-              onTap: () {
-                provider.setThemeMode(ThemeMode.dark);
-                Navigator.pop(context);
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showCurrencyPicker(BuildContext context, FinanceProvider provider) {
     final currencies = ['₹ INR', '\$ USD', '€ EUR', '£ GBP', '¥ JPY'];
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       builder: (_) => SafeArea(
         child: Column(
@@ -341,14 +256,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black26,
-                borderRadius: BorderRadius.circular(2),
+                color: context.soft,
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Select Currency',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: GoogleFonts.urbanist(
+                  fontSize: 20, fontWeight: FontWeight.w700, color: context.fg),
             ),
             const SizedBox(height: 8),
             ...currencies.map(
@@ -356,13 +272,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 leading: Radio<String>(
                   value: c,
                   groupValue: provider.currency,
-                  activeColor: AppTheme.brandDefault,
+                  activeColor: context.accent,
                   onChanged: (v) {
                     provider.setCurrency(v!);
                     Navigator.pop(context);
                   },
                 ),
-                title: Text(c),
+                title: Text(c, style: GoogleFonts.urbanist(fontWeight: FontWeight.w600, color: context.fg)),
                 onTap: () {
                   provider.setCurrency(c);
                   Navigator.pop(context);
@@ -385,7 +301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
         title: const Text('Change PIN'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -434,7 +350,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (currentPinCtrl.text != provider.userPin) {
+              if (!provider.checkPin(currentPinCtrl.text)) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Current PIN is incorrect')),
                 );
@@ -483,10 +399,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
         title: const Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+            Icon(Icons.warning_amber_rounded, color: AppTheme.blue),
             SizedBox(width: 8),
             Text('Clear All Data'),
           ],
@@ -502,12 +418,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
+              backgroundColor: AppTheme.blue,
+              foregroundColor: AppTheme.white,
             ),
             onPressed: () {
-              // Clear data by re-initializing lists
-              // For now just show confirmation
+              provider.clearAllData();
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -531,7 +446,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
         title: const Text('Log Out'),
         content: const Text(
             'Are you sure you want to log out? You\'ll need to enter your PIN to sign back in.'),
@@ -542,8 +457,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
+              backgroundColor: AppTheme.blue,
+              foregroundColor: AppTheme.white,
             ),
             onPressed: () {
               provider.logout();
@@ -564,7 +479,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
         title: Text(title),
         content: Text(body),
         actions: [
@@ -582,8 +497,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 class _SectionHeader extends StatelessWidget {
   final String title;
-  final bool isDark;
-  const _SectionHeader({required this.title, required this.isDark});
+  const _SectionHeader({required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -591,11 +505,11 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
       child: Text(
         title.toUpperCase(),
-        style: TextStyle(
+        style: GoogleFonts.urbanist(
           fontSize: 12,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           letterSpacing: 1.2,
-          color: isDark ? Colors.white38 : Colors.black38,
+          color: context.fgFaint,
         ),
       ),
     );
@@ -607,32 +521,24 @@ class _SettingsDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Divider(
-        color: isDark ? Colors.white10 : Colors.black12,
-        height: 1,
-      ),
+      child: Divider(color: context.border, height: 1),
     );
   }
 }
 
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
-  final Color iconBg;
-  final Color iconColor;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _SettingsTile({
     required this.icon,
-    required this.iconBg,
-    required this.iconColor,
     required this.title,
     required this.subtitle,
-    required this.onTap,
+    this.onTap,
   });
 
   @override
@@ -640,120 +546,27 @@ class _SettingsTile extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
       leading: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: iconBg,
-          borderRadius: BorderRadius.circular(12),
+        width: 44,
+        height: 44,
+        decoration: const BoxDecoration(
+          color: AppTheme.lime,
+          shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: iconColor, size: 22),
+        child: Icon(icon, color: AppTheme.ink, size: 22),
       ),
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        style: GoogleFonts.urbanist(fontWeight: FontWeight.w700, fontSize: 16, color: context.fg),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
+        style: GoogleFonts.urbanist(
           fontSize: 13,
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white54
-              : Colors.black54,
+          fontWeight: FontWeight.w500,
+          color: context.fgMuted,
         ),
       ),
-      trailing: Icon(
-        Icons.chevron_right_rounded,
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.white24
-            : Colors.black26,
-      ),
-      onTap: onTap,
-    );
-  }
-}
-
-class _SettingsSwitchTile extends StatelessWidget {
-  final IconData icon;
-  final Color iconBg;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _SettingsSwitchTile({
-    required this.icon,
-    required this.iconBg,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-      leading: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: iconBg,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(icon, color: iconColor, size: 22),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontSize: 13,
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white54
-              : Colors.black54,
-        ),
-      ),
-      trailing: Switch.adaptive(
-        value: value,
-        activeColor: AppTheme.brandDefault,
-        onChanged: onChanged,
-      ),
-    );
-  }
-}
-
-class _ThemeOption extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ThemeOption({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon,
-          color: selected ? AppTheme.brandDefault : Colors.grey),
-      title: Text(
-        label,
-        style: TextStyle(
-          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-          color: selected ? AppTheme.brandDefault : null,
-        ),
-      ),
-      trailing: selected
-          ? const Icon(Icons.check_circle, color: AppTheme.brandDefault)
-          : null,
+      trailing: onTap == null ? null : Icon(Icons.chevron_right_rounded, color: context.fgFaint),
       onTap: onTap,
     );
   }

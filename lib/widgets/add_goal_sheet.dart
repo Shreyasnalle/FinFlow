@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../models/financial_goal.dart';
 import '../providers/finance_provider.dart';
-
+import '../theme/app_theme.dart';
+import 'form_error.dart';
 
 class AddGoalSheet extends StatefulWidget {
   const AddGoalSheet({super.key});
@@ -13,16 +15,30 @@ class AddGoalSheet extends StatefulWidget {
 }
 
 class _AddGoalSheetState extends State<AddGoalSheet> {
+  String? _error;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _targetController = TextEditingController();
   final TextEditingController _savedController = TextEditingController();
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _targetController.dispose();
+    _savedController.dispose();
+    super.dispose();
+  }
 
   void _submit() {
     final title = _titleController.text.trim();
     final target = double.tryParse(_targetController.text) ?? 0;
     final saved = double.tryParse(_savedController.text) ?? 0;
 
-    if (title.isEmpty || target <= 0) {
+    if (title.isEmpty) {
+      setState(() => _error = 'Give your goal a name.');
+      return;
+    }
+    if (target <= 0) {
+      setState(() => _error = 'Enter a target amount greater than 0.');
       return;
     }
 
@@ -41,50 +57,90 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
   Widget build(BuildContext context) {
     final provider = Provider.of<FinanceProvider>(context);
     final currencySymbol = provider.currencySymbol;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+        color: context.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white24 : Colors.black26, 
-              borderRadius: BorderRadius.circular(2)
+          Center(
+            child: Container(
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(
+                color: context.fgFaint,
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text('New Savings Goal', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text('New savings goal',
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 6),
+          Text('Set a target and fund it bit by bit',
+              style: GoogleFonts.urbanist(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: context.fgMuted)),
           const SizedBox(height: 24),
           TextField(
             controller: _titleController,
-            decoration: const InputDecoration(labelText: 'Goal Title', hintText: 'Vacation, New Car, etc.'),
+            style: GoogleFonts.urbanist(
+                fontWeight: FontWeight.w600, color: context.fg),
+            decoration: const InputDecoration(
+                labelText: 'Goal title', hintText: 'Vacation, New Car, etc.'),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           TextField(
             controller: _targetController,
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: 'Target Amount ($currencySymbol)', prefixText: '$currencySymbol '),
+            style: GoogleFonts.urbanist(
+                fontWeight: FontWeight.w600, color: context.fg),
+            decoration: InputDecoration(
+                labelText: 'Target amount ($currencySymbol)',
+                prefixText: '$currencySymbol '),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           TextField(
             controller: _savedController,
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: 'Already Saved? (Optional)', prefixText: '$currencySymbol '),
+            style: GoogleFonts.urbanist(
+                fontWeight: FontWeight.w600, color: context.fg),
+            decoration: InputDecoration(
+                labelText: 'Already saved? (optional)',
+                prefixText: '$currencySymbol '),
           ),
-          const SizedBox(height: 32),
+          FormError(_error),
+          const SizedBox(height: 28),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _submit,
-              child: const Text('Add Goal'),
+              child: Row(
+                children: [
+                  const SizedBox(width: 32),
+                  const Expanded(
+                    child: Text('Add goal', textAlign: TextAlign.center),
+                  ),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: context.isDark ? AppTheme.ink : AppTheme.lime,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.arrow_forward_rounded,
+                        size: 18,
+                        color: context.isDark ? AppTheme.lime : AppTheme.ink),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

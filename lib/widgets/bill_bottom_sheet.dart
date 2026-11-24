@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/finance_provider.dart';
+import '../theme/app_theme.dart';
+import 'form_error.dart';
 import '../models/recurring_bill.dart';
 
 class BillBottomSheet extends StatefulWidget {
@@ -15,6 +18,7 @@ class BillBottomSheet extends StatefulWidget {
 }
 
 class _BillBottomSheetState extends State<BillBottomSheet> {
+  String? _error;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   DateTime? _selectedDate;
@@ -34,10 +38,19 @@ class _BillBottomSheetState extends State<BillBottomSheet> {
   void _submit() {
     final name = _nameController.text.trim();
     final amountRaw = _amountController.text.trim();
-    if (name.isEmpty || amountRaw.isEmpty || _selectedDate == null) return;
-
+    if (name.isEmpty) {
+      setState(() => _error = 'Enter a name for the bill.');
+      return;
+    }
     final amount = double.tryParse(amountRaw);
-    if (amount == null) return;
+    if (amount == null || amount <= 0) {
+      setState(() => _error = 'Enter the bill amount as a number greater than 0.');
+      return;
+    }
+    if (_selectedDate == null) {
+      setState(() => _error = 'Pick the due date.');
+      return;
+    }
 
     final provider = Provider.of<FinanceProvider>(context, listen: false);
 
@@ -83,30 +96,25 @@ class _BillBottomSheetState extends State<BillBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(
-          24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+        color: context.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black26,
-                borderRadius: BorderRadius.circular(2)),
+            width: 44,
+            height: 5,
+            decoration: BoxDecoration(color: AppTheme.lavender, borderRadius: BorderRadius.circular(3)),
           ),
           const SizedBox(height: 24),
-          Text(
-            widget.bill != null ? 'Update Bill' : 'Schedule Recurring Bill',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(widget.bill != null ? 'Update bill' : 'Schedule recurring bill', style: GoogleFonts.urbanist(fontSize: 26, fontWeight: FontWeight.w700, color: context.fg)),
           ),
           const SizedBox(height: 24),
           TextField(
@@ -137,6 +145,7 @@ class _BillBottomSheetState extends State<BillBottomSheet> {
               child: const Text('PICK DATE'),
             ),
           ),
+          FormError(_error),
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,

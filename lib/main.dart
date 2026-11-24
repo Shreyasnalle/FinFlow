@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'database/app_database.dart';
+import 'database/finance_repository.dart';
 import 'theme/app_theme.dart';
 import 'providers/finance_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/pin_login_screen.dart';
 import 'screens/main_screen.dart';
-import 'models/transaction.dart';
-import 'models/financial_goal.dart';
-import 'models/recurring_bill.dart';
-import 'models/asset.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,21 +24,12 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: AppTheme.surface,
-      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
     ),
   );
 
-  await Hive.initFlutter();
-
-  // Register adapters here (must be generated first via build_runner)
-  Hive.registerAdapter(TransactionAdapter());
-  Hive.registerAdapter(FinancialGoalAdapter());
-  Hive.registerAdapter(RecurringBillAdapter());
-  Hive.registerAdapter(AssetAdapter());
-
-  final financeProvider = FinanceProvider();
+  final database = await AppDatabase.open();
+  final financeProvider = FinanceProvider(FinanceRepository(database));
   await financeProvider.init();
 
   runApp(
@@ -51,6 +40,28 @@ void main() async {
       child: const FinFlowApp(),
     ),
   );
+}
+
+/// Inertial, bouncy scrolling on every platform; mouse/trackpad can drag too.
+class SmoothScrollBehavior extends MaterialScrollBehavior {
+  const SmoothScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+
+  @override
+  Widget buildOverscrollIndicator(
+          BuildContext context, Widget child, ScrollableDetails details) =>
+      child;
 }
 
 class FinFlowApp extends StatelessWidget {
@@ -71,8 +82,8 @@ class FinFlowApp extends StatelessWidget {
           title: 'FinFlow Forecast',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: provider.themeMode,
+          themeMode: ThemeMode.light,
+          scrollBehavior: const SmoothScrollBehavior(),
           home: SplashScreen(destination: destination),
         );
       },

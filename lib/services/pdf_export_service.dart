@@ -5,6 +5,11 @@ import 'package:intl/intl.dart';
 import '../providers/finance_provider.dart';
 
 class PdfExportService {
+  static const PdfColor _blue = PdfColor.fromInt(0xFF3760F9);
+  static const PdfColor _ink = PdfColor.fromInt(0xFF17161B);
+  static const PdfColor _lavender = PdfColor.fromInt(0xFFDAD9FB);
+  static const PdfColor _white = PdfColor.fromInt(0xFFFFFFFF);
+
   static String _safeCurrencyFormat(FinanceProvider provider, double amount) {
     String formatted = provider.currencyFormat.format(amount);
     return formatted
@@ -52,21 +57,21 @@ class PdfExportService {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('FINFLOW', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+                    pw.Text('FINFLOW', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: _blue)),
                     pw.SizedBox(height: 4),
                    
-                    pw.Text('patilharshavardhan554@gmail.com', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                    pw.Text('patilharshavardhan554@gmail.com', style: const pw.TextStyle(fontSize: 10, color: _ink)),
                   ],
                 ),
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.teal800, width: 1.5),
+                    border: pw.Border.all(color: _blue, width: 1.5),
                   ),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
-                      pw.Text('STATEMENT OF ACCOUNT', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+                      pw.Text('STATEMENT OF ACCOUNT', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: _blue)),
                       pw.SizedBox(height: 8),
                       pw.Text('Date: ${DateFormat('dd MMM yyyy').format(DateTime.now())}', style: const pw.TextStyle(fontSize: 10)),
                     ],
@@ -80,7 +85,7 @@ class PdfExportService {
               margin: const pw.EdgeInsets.symmetric(vertical: 24),
               padding: const pw.EdgeInsets.all(16),
               decoration: const pw.BoxDecoration(
-                color: PdfColors.grey100,
+                color: _lavender,
                 borderRadius: pw.BorderRadius.all(pw.Radius.circular(8)),
               ),
               child: pw.Row(
@@ -89,7 +94,7 @@ class PdfExportService {
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('Account Holder:', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                      pw.Text('Account Holder:', style: const pw.TextStyle(fontSize: 10, color: _ink)),
                       pw.SizedBox(height: 2),
                       pw.Text(provider.userName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
                       pw.SizedBox(height: 4),
@@ -99,7 +104,7 @@ class PdfExportService {
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
-                      pw.Text('Statement Period:', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                      pw.Text('Statement Period:', style: const pw.TextStyle(fontSize: 10, color: _ink)),
                       pw.SizedBox(height: 2),
                       pw.Text(
                         startDate != null 
@@ -114,41 +119,41 @@ class PdfExportService {
             ),
 
             // Account Summary Box
-            pw.Text('ACCOUNT SUMMARY', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+            pw.Text('ACCOUNT SUMMARY', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: _blue)),
             pw.SizedBox(height: 8),
             pw.Container(
               decoration: const pw.BoxDecoration(
                 border: pw.Border(
-                  top: pw.BorderSide(color: PdfColors.teal, width: 2),
-                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 1),
+                  top: pw.BorderSide(color: _blue, width: 2),
+                  bottom: pw.BorderSide(color: _lavender, width: 1),
                 ),
               ),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                 children: [
                   _summaryBox('Opening Balance', _safeCurrencyFormat(provider, openingBalance)),
-                  _summaryBox('Total Credits', _safeCurrencyFormat(provider, totalCredits), color: PdfColors.green700),
-                  _summaryBox('Total Debits', _safeCurrencyFormat(provider, totalDebits), color: PdfColors.red700),
+                  _summaryBox('Total Credits', _safeCurrencyFormat(provider, totalCredits), color: _blue),
+                  _summaryBox('Total Debits', _safeCurrencyFormat(provider, totalDebits), color: _ink),
                   _summaryBox('Closing Balance', _safeCurrencyFormat(provider, provider.currentBalance), isBold: true),
                 ],
               ),
             ),
 
             pw.SizedBox(height: 32),
-            pw.Text('TRANSACTION DETAILS', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+            pw.Text('TRANSACTION DETAILS', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: _blue)),
             pw.SizedBox(height: 8),
 
             if (transactions.isEmpty)
-              pw.Text('No transactions found for this period.', style: const pw.TextStyle(color: PdfColors.grey600))
+              pw.Text('No transactions found for this period.', style: const pw.TextStyle(color: _ink))
             else
               pw.TableHelper.fromTextArray(
                 context: context,
                 border: const pw.TableBorder(
-                  horizontalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-                  bottom: pw.BorderSide(color: PdfColors.teal800, width: 1.5),
+                  horizontalInside: pw.BorderSide(color: _lavender, width: 0.5),
+                  bottom: pw.BorderSide(color: _blue, width: 1.5),
                 ),
-                headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                headerDecoration: const pw.BoxDecoration(color: PdfColors.teal800),
+                headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _white),
+                headerDecoration: const pw.BoxDecoration(color: _blue),
                 cellStyle: const pw.TextStyle(fontSize: 10),
                 cellAlignment: pw.Alignment.centerLeft,
                 columnWidths: {
@@ -170,7 +175,7 @@ class PdfExportService {
               
             pw.SizedBox(height: 40),
             pw.Center(
-               child: pw.Text('*** END OF STATEMENT ***', style: const pw.TextStyle(color: PdfColors.grey500, fontSize: 10)),
+               child: pw.Text('*** END OF STATEMENT ***', style: const pw.TextStyle(color: _ink, fontSize: 10)),
             )
           ];
         },
@@ -188,14 +193,14 @@ class PdfExportService {
       padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       child: pw.Column(
         children: [
-          pw.Text(title, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+          pw.Text(title, style: const pw.TextStyle(fontSize: 10, color: _ink)),
           pw.SizedBox(height: 6),
           pw.Text(
             value, 
             style: pw.TextStyle(
               fontSize: 14, 
               fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-              color: color ?? PdfColors.black,
+              color: color ?? _ink,
             ),
           ),
         ],

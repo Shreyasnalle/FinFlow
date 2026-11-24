@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/financial_goal.dart';
 import '../providers/finance_provider.dart';
@@ -18,6 +19,12 @@ class _SaveToGoalSheetState extends State<SaveToGoalSheet> {
 
   double get _remaining => widget.goal.targetAmount - widget.goal.savedAmount;
 
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
   void _submit() {
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) {
@@ -36,10 +43,15 @@ class _SaveToGoalSheetState extends State<SaveToGoalSheet> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$symbol${amount.toInt()} saved toward ${widget.goal.title}!'),
-        backgroundColor: AppTheme.brandDark,
+        content: Text(
+          '$symbol${amount.toInt()} saved toward ${widget.goal.title}!',
+          style: GoogleFonts.urbanist(
+              fontWeight: FontWeight.w700, color: AppTheme.ink),
+        ),
+        backgroundColor: AppTheme.lime,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
       ),
     );
   }
@@ -47,7 +59,6 @@ class _SaveToGoalSheetState extends State<SaveToGoalSheet> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<FinanceProvider>(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final formatCurrency = provider.currencyFormat;
     final currencySymbol = provider.currencySymbol;
     final percent = widget.goal.targetAmount > 0
@@ -55,77 +66,97 @@ class _SaveToGoalSheetState extends State<SaveToGoalSheet> {
         : 0.0;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(32),
-          topRight: Radius.circular(32),
-        ),
+        color: context.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white24 : Colors.black26,
-              borderRadius: BorderRadius.circular(2),
+          Center(
+            child: Container(
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(
+                color: context.fgFaint,
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Save to Goal', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 24),
+          Text('Save to goal',
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 20),
 
-          // Goal info summary
+          // Goal summary: blue block with lime chip
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppTheme.brandDefault.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.brandDefault.withValues(alpha: 0.2)),
+              color: AppTheme.blue,
+              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.goal.title,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '${formatCurrency.format(widget.goal.savedAmount)} / ${formatCurrency.format(widget.goal.targetAmount)}',
-                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    Expanded(
+                      child: Text(
+                        widget.goal.title,
+                        style: GoogleFonts.urbanist(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.white),
+                      ),
                     ),
-                    Text(
-                      '${percent.toInt()}%',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.brandDark,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.lime,
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusPill),
+                      ),
+                      child: Text(
+                        '${percent.toInt()}%',
+                        style: GoogleFonts.urbanist(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.ink),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
+                Text(
+                  '${formatCurrency.format(widget.goal.savedAmount)} / ${formatCurrency.format(widget.goal.targetAmount)}',
+                  style: GoogleFonts.urbanist(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.white.withValues(alpha: 0.75)),
+                ),
+                const SizedBox(height: 14),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(9999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   child: LinearProgressIndicator(
                     value: percent / 100,
-                    minHeight: 6,
-                    backgroundColor: isDark ? Colors.black26 : Colors.black12,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.brandDefault),
+                    minHeight: 10,
+                    backgroundColor: AppTheme.white.withValues(alpha: 0.25),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(AppTheme.lime),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Text(
                   'Remaining: ${formatCurrency.format(_remaining)}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.urbanist(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.white.withValues(alpha: 0.75)),
                 ),
               ],
             ),
@@ -135,8 +166,10 @@ class _SaveToGoalSheetState extends State<SaveToGoalSheet> {
           TextField(
             controller: _amountController,
             keyboardType: TextInputType.number,
+            style: GoogleFonts.urbanist(
+                fontWeight: FontWeight.w600, color: context.fg),
             decoration: InputDecoration(
-              labelText: 'Amount to Save ($currencySymbol)',
+              labelText: 'Amount to save ($currencySymbol)',
               prefixText: '$currencySymbol ',
               errorText: _error,
             ),
@@ -149,17 +182,21 @@ class _SaveToGoalSheetState extends State<SaveToGoalSheet> {
           // Quick amount chips
           Wrap(
             spacing: 8,
-            children: [500, 1000, 2000, 5000].where((v) => v <= _remaining).map((v) {
+            runSpacing: 8,
+            children:
+                [500, 1000, 2000, 5000].where((v) => v <= _remaining).map((v) {
               return ActionChip(
                 label: Text('$currencySymbol$v'),
                 onPressed: () {
                   _amountController.text = v.toString();
                   if (_error != null) setState(() => _error = null);
                 },
-                backgroundColor: AppTheme.brandDefault.withValues(alpha: 0.12),
-                labelStyle: const TextStyle(
-                  color: AppTheme.brandDark,
-                  fontWeight: FontWeight.bold,
+                backgroundColor: AppTheme.lime,
+                side: BorderSide.none,
+                shape: const StadiumBorder(),
+                labelStyle: GoogleFonts.urbanist(
+                  color: AppTheme.ink,
+                  fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),
               );
@@ -171,7 +208,25 @@ class _SaveToGoalSheetState extends State<SaveToGoalSheet> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _submit,
-              child: const Text('Save Money'),
+              child: Row(
+                children: [
+                  const SizedBox(width: 32),
+                  const Expanded(
+                    child: Text('Save money', textAlign: TextAlign.center),
+                  ),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: context.isDark ? AppTheme.ink : AppTheme.lime,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.arrow_forward_rounded,
+                        size: 18,
+                        color: context.isDark ? AppTheme.lime : AppTheme.ink),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

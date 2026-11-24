@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../database/demo_seed.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
+import 'main_screen.dart';
 import 'signup_screen.dart';
 import 'pin_login_screen.dart';
+import '../widgets/tap_scale.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -15,7 +19,7 @@ class WelcomeScreen extends StatefulWidget {
 class _WelcomeScreenState extends State<WelcomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
-  late Animation<double> _pulseAnim;
+  late Animation<double> _floatAnim;
 
   @override
   void initState() {
@@ -24,7 +28,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.8, end: 1.2).animate(
+    _floatAnim = Tween<double>(begin: -6, end: 6).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
     );
   }
@@ -33,6 +37,25 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   void dispose() {
     _animController.dispose();
     super.dispose();
+  }
+
+  bool _demoBusy = false;
+
+  Future<void> _tryDemo() async {
+    final provider = Provider.of<FinanceProvider>(context, listen: false);
+    setState(() => _demoBusy = true);
+    // Let the "building" label paint before the (synchronous) seeding runs.
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    final ok = await provider.createDemoAccount();
+    if (!mounted) return;
+    if (!ok) {
+      setState(() => _demoBusy = false);
+      return;
+    }
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const MainScreen()),
+    );
   }
 
   void _getStarted() {
@@ -45,20 +68,21 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   void _logIn() {
     final provider = Provider.of<FinanceProvider>(context, listen: false);
     if (provider.hasProfile) {
-      // Existing user → PIN screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const PinLoginScreen()),
       );
     } else {
-      // No profile yet → tell them to sign up
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('No account found. Please sign up first.'),
-          backgroundColor: AppTheme.brandDefault,
+          content: Text(
+            'No account found. Please sign up first.',
+            style: GoogleFonts.urbanist(
+                fontWeight: FontWeight.w600, color: context.onCta),
+          ),
+          backgroundColor: context.cta,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       );
     }
@@ -66,144 +90,302 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final provider = Provider.of<FinanceProvider>(context, listen: false);
+    final isDark = context.isDark;
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            colors: isDark
-                ? [const Color(0xFF2d2d2d), const Color(0xFF222222)]
-                : [const Color(0xFFffffff), const Color(0xFFf3f4f6)],
-            center: Alignment.center,
-            radius: 1.5,
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 64),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-                    color: isDark ? AppTheme.brandDefault : Colors.grey,
-                    onPressed: () {
-                      provider.setThemeMode(
-                        isDark ? ThemeMode.light : ThemeMode.dark,
-                      );
-                    },
+      backgroundColor: context.bg,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+          child: Column(
+            children: [
+              // Brand row + theme toggle
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppTheme.blue,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: const Icon(Icons.show_chart_rounded,
+                        size: 20, color: AppTheme.white),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'FinFlow',
+                    style: GoogleFonts.urbanist(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: context.fg,
+                    ),
+                  ),
+                ],
+              ),
+
+              const Spacer(),
+
+              // Headline
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Take Charge\nOf Your\nMoney',
+                        style: GoogleFonts.urbanist(
+                          fontSize: 44,
+                          height: 1.08,
+                          fontWeight: FontWeight.w700,
+                          color: context.fg,
+                          letterSpacing: -1,
+                        ),
+                      ),
+                    ),
+                    AnimatedBuilder(
+                      animation: _floatAnim,
+                      builder: (_, child) => Transform.translate(
+                        offset: Offset(0, _floatAnim.value),
+                        child: child,
+                      ),
+                      child: Container(
+                        width: 58,
+                        height: 58,
+                        decoration: const BoxDecoration(
+                          color: AppTheme.lime,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.north_east_rounded,
+                            color: AppTheme.ink, size: 28),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Track spending, set goals and see your\nfuture wealth predicted.',
+                  style: GoogleFonts.urbanist(
+                    fontSize: 16,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                    color: context.fgMuted,
                   ),
                 ),
-                Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        ScaleTransition(
-                          scale: _pulseAnim,
-                          child: Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color: AppTheme.brandDefault.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.05)
-                                : Colors.black.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(32),
-                            border: Border.all(
-                              color: isDark ? Colors.white10 : Colors.black12,
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.show_chart,
-                            size: 48,
-                            color: isDark ? Colors.white : Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    RichText(
-                      text: TextSpan(
+              ),
+
+              const SizedBox(height: 28),
+
+              // Preview tiles (mirrors the reference's stat cards)
+              Row(
+                children: [
+                  Expanded(
+                    flex: 6,
+                    child: Container(
+                      height: 132,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: AppTheme.blue,
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusCard),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextSpan(
-                            text: 'FinFlow',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 36,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Net worth',
+                                style: GoogleFonts.urbanist(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.white.withValues(alpha: 0.85),
                                 ),
+                              ),
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.lime,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.north_east_rounded,
+                                    size: 14, color: AppTheme.ink),
+                              ),
+                            ],
                           ),
-                          const TextSpan(
-                            text: '.',
-                            style: TextStyle(
-                              color: AppTheme.brandDefault,
-                              fontSize: 36,
-                              fontWeight: FontWeight.w900,
+                          const Spacer(),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '₹ 1,24,500',
+                              style: GoogleFonts.urbanist(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.white,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'across all accounts',
+                            style: GoogleFonts.urbanist(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.white.withValues(alpha: 0.75),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Your future wealth, predicted.',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: isDark ? Colors.white60 : Colors.black54,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w300,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 4,
+                    child: Container(
+                      height: 132,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: context.soft,
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusCard),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Saved',
+                            style: GoogleFonts.urbanist(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: context.onSoft.withValues(alpha: 0.7),
+                            ),
                           ),
-                    ),
-                  ],
-                ),
-                Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _getStarted,
-                        child: const Text('Get Started'),
+                          const Spacer(),
+                          Text(
+                            '74%',
+                            style: GoogleFonts.urbanist(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: context.onSoft,
+                            ),
+                          ),
+                          Text(
+                            'of goal',
+                            style: GoogleFonts.urbanist(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: context.onSoft.withValues(alpha: 0.65),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: _logIn,
-                      child: RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'Already have an account? ',
-                              style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+
+              const Spacer(),
+
+              // CTA pill with lime arrow
+              TapScale(
+                onTap: _getStarted,
+                child: Container(
+                  height: 64,
+                  padding: const EdgeInsets.only(left: 28, right: 8),
+                  decoration: BoxDecoration(
+                    color: context.cta,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            "Let's get started!",
+                            style: GoogleFonts.urbanist(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: context.onCta,
                             ),
-                            const TextSpan(
-                              text: 'Log In',
-                              style: TextStyle(
-                                color: AppTheme.brandDefault,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.ink : AppTheme.lime,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: 28,
+                          color: isDark ? AppTheme.lime : AppTheme.ink,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
+              const SizedBox(height: 14),
+              TapScale(
+                onTap: _logIn,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.urbanist(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: context.fgMuted,
+                      ),
+                      children: [
+                        const TextSpan(text: 'Already have an account? '),
+                        TextSpan(
+                          text: 'Sign in',
+                          style: GoogleFonts.urbanist(
+                            fontWeight: FontWeight.w800,
+                            color: context.fg,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (DemoSeed.enabled)
+                TapScale(
+                  onTap: _demoBusy ? null : _tryDemo,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(
+                      _demoBusy
+                          ? 'Building 3 years of demo data…'
+                          : 'Explore with a demo account',
+                      style: GoogleFonts.urbanist(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: context.fgMuted,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+              ),
             ),
           ),
         ),
