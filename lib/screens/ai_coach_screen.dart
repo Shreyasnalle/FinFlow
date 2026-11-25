@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -7,6 +8,8 @@ import '../providers/finance_provider.dart';
 import '../services/agent_chat_service.dart';
 import '../services/ai_coach_service.dart' show ChatMessage;
 import '../theme/app_theme.dart';
+import '../widgets/markdown_text.dart';
+import '../widgets/smooth_wheel.dart';
 import '../widgets/tap_scale.dart';
 
 class AiCoachScreen extends StatefulWidget {
@@ -21,6 +24,7 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
   final _controller = TextEditingController();
   final _scroll = ScrollController();
   bool _thinking = false;
+  final _replyKey = GlobalKey();
 
   // In-flight request, cancelled if the screen goes away.
   http.Client? _client;
@@ -53,8 +57,21 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
   void _scrollToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
-        _scroll.animateTo(_scroll.position.maxScrollExtent + 120,
+        _scroll.animateTo(_scroll.position.maxScrollExtent,
             duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      }
+    });
+  }
+
+  /// A new reply starts at its first line (follow-ups sit below it and scroll
+  /// with the page) instead of jumping to the bottom of a long answer.
+  void _scrollToReply() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _replyKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx, alignment: 0.0, duration: const Duration(milliseconds: 350), curve: Curves.easeOutCubic);
+      } else {
+        _scrollToEnd();
       }
     });
   }
@@ -96,7 +113,7 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
             _finish(() {
               _messages.add(ChatMessage(fromUser: false, text: event.reply.isEmpty ? '…' : event.reply));
               _followups = event.followups;
-            });
+            }, toReply: true);
           case AgentFailure():
             _finish(() => _messages.add(ChatMessage(fromUser: false, text: event.message ?? _errorText, isError: true)));
         }
@@ -108,7 +125,7 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
     );
   }
 
-  void _finish(VoidCallback change) {
+  void _finish(VoidCallback change, {bool toReply = false}) {
     _client?.close();
     _client = null;
     _sub = null;
@@ -117,16 +134,13 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
       _thinking = false;
       _status = null;
     });
-    _scrollToEnd();
+    toReply ? _scrollToReply() : _scrollToEnd();
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FinanceProvider>();
     final first = provider.userName.trim().split(' ').first;
-    final showChips = !_thinking && _followups.isNotEmpty && _messages.isNotEmpty && !_messages.last.fromUser;
-    final extra = (_thinking ? 1 : 0) + (showChips ? 1 : 0);
-
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -159,16 +173,7 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
             Expanded(
               child: _messages.isEmpty
                   ? _welcome(context, first)
-                  : ListView.builder(
-                      controller: _scroll,
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                      itemCount: _messages.length + extra,
-                      itemBuilder: (_, i) {
-                        if (i < _messages.length) return _bubble(context, _messages[i]);
-                        return _thinking ? showLiveStatus(context, _status ?? 'Thinking…') : showFollowUps(context, _followups);
-                      },
-                    ),
+                  : _conversation(context),
             ),
             _composer(context),
           ],
@@ -231,28 +236,61 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
     );
   }
 
-  Widget _bubble(BuildContext context, ChatMessage m) {
+  /// The whole chat is one scroll view: messages, then the live status or the
+  /// follow-ups, so everything scrolls together and nothing is pinned.
+  Widget _conversation(BuildContext context) {
+    final lastReply = _messages.lastIndexWhere((m) => !m.fromUser && !m.isError);
+    final showChips = !_thinking && _followups.isNotEmpty && !_messages.last.fromUser;
+    return SingleChildScrollView(
+      controller: _scroll,
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      child: SmoothWheel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < _messages.length; i++)
+              _bubble(context, _messages[i], key: i == lastReply ? _replyKey : null),
+            if (_thinking) showLiveStatus(context, _status ?? 'Thinking…'),
+            if (showChips) showFollowUps(context, _followups),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bubble(BuildContext context, ChatMessage m, {Key? key}) {
     final user = m.fromUser;
     final Color bg = user ? context.cta : (m.isError ? AppTheme.blue : context.surface);
     final Color fg = user ? context.onCta : (m.isError ? AppTheme.white : context.fg);
+    final plain = user || m.isError;
     return Align(
+      key: key,
       alignment: user ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(22),
-            topRight: const Radius.circular(22),
-            bottomLeft: Radius.circular(user ? 22 : 6),
-            bottomRight: Radius.circular(user ? 6 : 22),
+      child: GestureDetector(
+        onLongPress: () {
+          Clipboard.setData(ClipboardData(text: m.text));
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1)));
+        },
+        child: Container(
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * (plain ? 0.82 : 0.92)),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(22),
+              topRight: const Radius.circular(22),
+              bottomLeft: Radius.circular(user ? 22 : 6),
+              bottomRight: Radius.circular(user ? 6 : 22),
+            ),
           ),
-        ),
-        child: SelectableText(
-          m.text,
-          style: GoogleFonts.urbanist(fontSize: 15, fontWeight: FontWeight.w500, height: 1.4, color: fg),
+          child: plain
+              ? Text(m.text, style: GoogleFonts.urbanist(fontSize: 15, fontWeight: FontWeight.w500, height: 1.4, color: fg))
+              : MarkdownText(m.text, color: fg),
         ),
       ),
     );

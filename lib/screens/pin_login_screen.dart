@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../database/demo_seed.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/tap_scale.dart';
 import 'main_screen.dart';
 
 class PinLoginScreen extends StatefulWidget {
@@ -18,6 +20,7 @@ class _PinLoginScreenState extends State<PinLoginScreen>
   final List<String> _digits = [];
   String _error = '';
   bool _showForgotPin = false;
+  bool _demoBusy = false;
   int _failCount = 0;
 
   late AnimationController _shakeController;
@@ -81,6 +84,42 @@ class _PinLoginScreenState extends State<PinLoginScreen>
         }
       });
     }
+  }
+
+  Future<void> _tryDemo() async {
+    final provider = Provider.of<FinanceProvider>(context, listen: false);
+    // A real account's data would be replaced, so ask first.
+    if (provider.userName != DemoSeed.userName) {
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Open the demo account?'),
+          content: const Text(
+              'This replaces the data stored on this device with a demo account holding 3 years of sample data.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Open demo')),
+          ],
+        ),
+      );
+      if (go != true || !mounted) return;
+    }
+    setState(() => _demoBusy = true);
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    final ok = await provider.createDemoAccount();
+    if (!mounted) return;
+    if (!ok) {
+      setState(() => _demoBusy = false);
+      return;
+    }
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const MainScreen()),
+    );
   }
 
   @override
@@ -220,7 +259,25 @@ class _PinLoginScreenState extends State<PinLoginScreen>
                     // Number pad
                     _buildNumPad(isDark),
 
-                    const SizedBox(height: 32),
+                    if (DemoSeed.enabled)
+                      TapScale(
+                        onTap: _demoBusy ? null : _tryDemo,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Text(
+                            _demoBusy
+                                ? 'Building 3 years of demo data…'
+                                : 'Explore with a demo account',
+                            style: GoogleFonts.urbanist(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: context.fgMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),

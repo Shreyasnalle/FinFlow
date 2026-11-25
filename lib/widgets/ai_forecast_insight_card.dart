@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
 import '../services/agent_chat_service.dart';
 import '../theme/app_theme.dart';
+import 'markdown_text.dart';
 
 /// Asks the AI coach for suggestions on already-computed forecast numbers.
 /// Used on both the Forecast and Goals pages.
@@ -107,9 +108,7 @@ class _AiForecastInsightCardState extends State<AiForecastInsightCard> {
                       fontWeight: FontWeight.w500,
                       color: context.fgMuted))
             else if (_reply != null)
-              Text(_reply!,
-                  style: GoogleFonts.urbanist(
-                      fontSize: 14, height: 1.45, color: context.fg))
+              MarkdownText(_reply!, color: context.fg, fontSize: 14)
             else if (_error != null)
               Text(_error!,
                   style: GoogleFonts.urbanist(
