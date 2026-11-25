@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.agent.models import AgentError, AgentRequest
+from app.api.rate_limit import enforce_rate_limit
 from app.api.schemas import ChatRequest, ChatResponse
 from app.api.stream import event_stream
 from app.service import ChatService
@@ -28,7 +29,7 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(enforce_rate_limit)])
 async def chat(body: ChatRequest, service: ChatService = Depends(get_service)) -> ChatResponse:
     """Plain request/response (no live status)."""
     try:
@@ -38,7 +39,7 @@ async def chat(body: ChatRequest, service: ChatService = Depends(get_service)) -
     return ChatResponse(**result.__dict__)
 
 
-@router.post("/chat/stream")
+@router.post("/chat/stream", dependencies=[Depends(enforce_rate_limit)])
 async def chat_stream(body: ChatRequest, service: ChatService = Depends(get_service)) -> StreamingResponse:
     """Server-Sent Events: many `status` events, then one `result` (or `error`) event."""
     queue: asyncio.Queue = asyncio.Queue()

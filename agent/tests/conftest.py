@@ -6,10 +6,21 @@ from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import RunnableLambda
 
+from app.api.rate_limit import get_limiter, get_users_limiter
 from app.config import Settings
 from app.skills.registry import SkillRegistry
 
 CANARY = "FFX-testcanary"
+
+
+@pytest.fixture(autouse=True)
+def fresh_rate_limiter():
+    """The app keeps process-wide limiters; every test starts with empty counters."""
+    get_limiter.cache_clear()
+    get_users_limiter.cache_clear()
+    yield
+    get_limiter.cache_clear()
+    get_users_limiter.cache_clear()
 
 
 class ScriptedModel(BaseChatModel):

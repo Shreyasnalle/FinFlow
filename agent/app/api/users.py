@@ -9,12 +9,13 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Path
 
+from app.api.rate_limit import enforce_users_rate_limit
 from app.context.numbers import build_context
 from app.context.snapshot import Snapshot
 from app.store import get_data_store, get_memory_store
 from app.store.stores import MemoryStore, UserDataStore
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["users"], dependencies=[Depends(enforce_users_rate_limit)])
 UserId = Path(pattern=r"^[A-Za-z0-9_-]{1,64}$")
 
 

@@ -98,7 +98,7 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
               _followups = event.followups;
             });
           case AgentFailure():
-            _finish(() => _messages.add(const ChatMessage(fromUser: false, text: _errorText, isError: true)));
+            _finish(() => _messages.add(ChatMessage(fromUser: false, text: event.message ?? _errorText, isError: true)));
         }
       },
       onError: (_) {

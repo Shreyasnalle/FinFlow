@@ -325,6 +325,8 @@ user message + snapshot of the user's finances + memory
 - **Follow-ups:** every reply ends with three checked follow-up questions; if the model skips or botches them, a repair call or safe fallbacks are used.
 - **Live status:** the stream emits stages such as `reading_context`, `thinking`, `loading_skill`, `searching_web`, `writing`, `checking`, `done`.
 - **Endpoints:** `GET /health`, `POST /chat`, `POST /chat/stream`.
+- **Rate limited:** the chat endpoints (and, separately, the `/users` endpoints) are limited per client IP and globally (HTTP 429 with `Retry-After`), and request bodies are capped (HTTP 413), so a public deployment can't drain the model quota or run out of memory.
+- **Per-user data and memory (backend, not used by the app yet):** the agent can store a synced data snapshot and a `memory.md` per `user_id` (`PUT /users/{id}/data`, memory endpoints; see [`agent/docs/MEMORY_AND_CONTEXT.md`](agent/docs/MEMORY_AND_CONTEXT.md)). These endpoints have no authentication, so public deployments turn them off with `USERS_API_ENABLED=false`.
 
 What the app sends with each chat: your name, profession, currency, today's date, cash balance, average monthly net, this month's income and spending (total and by category), budgets, goals, recurring bills and assets. It does **not** send individual transactions, your PIN or your mobile number.
 
@@ -342,6 +344,12 @@ What the app sends with each chat: your name, profession, currency, today's date
 | `CLASSIFIER_MODEL` | no | `openai/gpt-oss-20b` | Guardrail classifier model |
 | `FIRECRAWL_API_KEY` | no | – | Cloud web search (omit to disable) |
 | `FIRECRAWL_API_URL` | no | – | Point at a self-hosted Firecrawl instead |
+| `RATE_LIMIT_*` | no | see below | Rate limits for the chat endpoints and (separately) the `/users` endpoints |
+| `MAX_REQUEST_BYTES` | no | `2000000` | Larger request bodies are refused with HTTP 413 |
+| `USERS_API_ENABLED` | no | `true` | Serve the `/users` endpoints; set `false` on public deployments (no authentication yet) |
+| `FINFLOW_AGENT_DB` | no | `agent/data/finflow_agent.db` | SQLite file for synced data and memory (not durable on Render's free plan) |
+
+Rate limiting defaults (all optional): `RATE_LIMIT_PER_MINUTE=12` and `RATE_LIMIT_PER_DAY=200` per client IP, `RATE_LIMIT_GLOBAL_PER_MINUTE=60` and `RATE_LIMIT_GLOBAL_PER_DAY=2000` across all clients, `RATE_LIMIT_ENABLED=true`. Behind a proxy also set `RATE_LIMIT_CLIENT_IP_HEADER` (and `RATE_LIMIT_FORWARDED_HOPS`). Details in [`agent/README.md`](agent/README.md#rate-limiting).
 
 ### App (compile-time `--dart-define`)
 
@@ -421,7 +429,7 @@ The coach gives educational guidance, not licensed financial advice.
 
 - **Android and Web only** (no iOS or desktop runners).
 - **Live stock/commodity quotes don't load in a browser** (the quote provider blocks cross-origin requests); they work in the Android app. Crypto, forex and news work on web.
-- **The AI Coach needs the Python agent to be running and reachable.** The default URL targets the Android emulator, so shared APKs need `AGENT_BASE_URL` pointing at a hosted agent.
+- **The AI Coach needs the Python agent to be running and reachable.** The default URL targets the Android emulator, so shared APKs need `AGENT_BASE_URL` pointing at a hosted agent. A free Render deployment is described in [DEVELOPMENT.md](DEVELOPMENT.md#deploying-the-agent-to-render); the app wakes a sleeping free-tier backend automatically.
 - **Android blocks plain `http://` traffic by default** and the project has no cleartext exception, so on Android the Coach needs an `https://` agent URL (see [DEVELOPMENT.md](DEVELOPMENT.md#3-running-the-project) for a debug-only workaround).
 - **Release builds are debug-signed** until a release keystore is configured.
 - `lib/services/ai_coach_service.dart` still contains an older direct-to-Anthropic client (user-supplied key); no screen uses it any more, only its `ChatMessage` type is shared.

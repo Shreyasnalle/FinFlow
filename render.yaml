@@ -1,0 +1,57 @@
+# Render Blueprint for the FinFlow finance agent (the Python service in agent/).
+# Deploy guide: DEVELOPMENT.md → "Deploying the agent to Render".
+#
+# No secrets live in this file. `sync: false` makes Render ask for the value in its dashboard
+# when the Blueprint is first created; it is never written to git.
+
+services:
+  - type: web
+    name: finflow-agent
+    runtime: python
+    plan: free # 512 MB RAM, sleeps after ~15 idle minutes, ~1 minute to wake
+
+    # Build and run only the agent/ folder of this monorepo. Commands are relative to rootDir.
+    rootDir: agent
+    buildCommand: pip install .
+    # One worker on purpose: the rate limiter keeps its counters in memory.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+
+    # Redeploy only when the agent changes (paths are relative to the repo root, not rootDir),
+    # so Flutter-only commits don't restart the backend.
+    autoDeployTrigger: commit
+    buildFilter:
+      paths:
+        - agent/**
+
+    envVars:
+      # Pin the Python version we test with (Render's default for new services is much newer).
+      - key: PYTHON_VERSION
+        value: 3.12.9
+
+      # Secret: Render prompts for this when the Blueprint is created.
+      - key: GROQ_API_KEY
+        sync: false
+
+      # The /users endpoints (data sync, memory) have no authentication yet, so they are NOT served on this
+      # public deployment. The app sends its data inline with every chat, which needs none of them.
+      # Turn this on only after adding authentication (see DEVELOPMENT.md → "Before exposing it publicly").
+      - key: USERS_API_ENABLED
+        value: "false"
+
+      # The free plan has no persistent disk: the filesystem (including this SQLite file) is wiped on
+      # every redeploy, restart and sleep. See "Free-plan limits" in DEVELOPMENT.md before relying on it.
+      - key: FINFLOW_AGENT_DB
+        value: /tmp/finflow_agent.db
+
+      # Rate limiting: tell the limiter where the client IP is. Entries are read from the right because
+      # clients can add their own to the left of X-Forwarded-For. After the first deploy, check the
+      # logs (DEBUG flag below) to confirm the hop count, then set the DEBUG flag to "false".
+      - key: RATE_LIMIT_CLIENT_IP_HEADER
+        value: X-Forwarded-For
+      - key: RATE_LIMIT_FORWARDED_HOPS
+        value: "1"
+      - key: RATE_LIMIT_DEBUG_LOG_CLIENTS
+        value: "true"
+
+      # Optional web search: add FIRECRAWL_API_KEY in the dashboard if you want it (leave it out to disable).

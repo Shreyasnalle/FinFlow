@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../config/agent_config.dart';
@@ -21,12 +22,108 @@ class AgentResult extends AgentEvent {
   final List<String> followups;
 }
 
-/// Terminal failure. The raw backend detail is deliberately not exposed to the UI.
-class AgentFailure extends AgentEvent {}
+/// Terminal failure. The raw backend detail is deliberately not exposed to the UI;
+/// [message] is only ever a friendly sentence written for the user (null = use the generic text).
+class AgentFailure extends AgentEvent {
+  AgentFailure({this.message});
+  final String? message;
+}
+
+/// Knows whether the backend is awake. Free hosts (e.g. Render) put a service to sleep after ~15 idle
+/// minutes and take about a minute to wake it, which is longer than a normal request timeout. Pinging
+/// `/health` first (and waiting for it) turns "coach unavailable" into a short, explained wait.
+class AgentWakeUp {
+  /// Treat the backend as awake for this long after it last answered (hosts sleep after ~15 minutes).
+  static const awakeFor = Duration(minutes: 10);
+
+  /// A cold start takes about a minute; allow some slack.
+  static const maxWait = Duration(seconds: 75);
+
+  /// After an unreachable backend, background pre-warms stay quiet for this long.
+  static const retryAfterFailure = Duration(seconds: 30);
+
+  static DateTime? _lastOk;
+  static DateTime? _lastFail;
+  static Future<bool>? _inFlight;
+
+  @visibleForTesting
+  static DateTime Function() now = DateTime.now;
+  @visibleForTesting
+  static http.Client Function() clientFactory = http.Client.new;
+  @visibleForTesting
+  static Duration retryDelay = const Duration(seconds: 3);
+  @visibleForTesting
+  static Duration attemptTimeout = const Duration(seconds: 15);
+
+  static bool get isWarm => _lastOk != null && now().difference(_lastOk!) < awakeFor;
+
+  /// Call when the backend just answered a real request.
+  static void markAwake() {
+    _lastOk = now();
+    _lastFail = null;
+  }
+
+  @visibleForTesting
+  static void reset() {
+    _lastOk = _lastFail = null;
+    _inFlight = null;
+    now = DateTime.now;
+    clientFactory = http.Client.new;
+    retryDelay = const Duration(seconds: 3);
+    attemptTimeout = const Duration(seconds: 15);
+  }
+
+  /// Completes true once `/health` answers 200. Callers share one ping. With [force] false (background
+  /// pre-warm) it stays quiet for a while after an unreachable backend instead of retrying on every call.
+  static Future<bool> ensureAwake({bool force = false, Duration wait = maxWait}) {
+    if (isWarm) return Future.value(true);
+    if (!force && _lastFail != null && now().difference(_lastFail!) < retryAfterFailure) {
+      return Future.value(false);
+    }
+    return _inFlight ??= _ping(wait).whenComplete(() => _inFlight = null);
+  }
+
+  static Future<bool> _ping(Duration wait) async {
+    final client = clientFactory();
+    final deadline = now().add(wait);
+    try {
+      while (true) {
+        try {
+          final res = await client.get(Uri.parse('$agentBaseUrl/health')).timeout(attemptTimeout);
+          if (res.statusCode == 200) {
+            markAwake();
+            return true;
+          }
+          // A non-200 (e.g. 502/503) is the host still booting: keep waiting.
+        } on TimeoutException {
+          // Connection held open while the host boots: try again.
+        } catch (_) {
+          _lastFail = now();
+          return false; // can't even connect (offline, wrong URL, blocked): don't make the user wait
+        }
+        if (!now().add(retryDelay).isBefore(deadline)) {
+          _lastFail = now();
+          return false;
+        }
+        await Future<void>.delayed(retryDelay);
+      }
+    } finally {
+      client.close();
+    }
+  }
+}
 
 /// Streams a chat turn from the finance agent backend (`POST /chat/stream`, SSE).
 class AgentChatService {
   static const maxHistory = 20;
+
+  static const wakingMessage = 'Waking up your coach… this can take up to a minute.';
+  static const wakeFailedMessage = 'Your coach is taking longer than usual to start. Please try again in a minute.';
+  static const slowDownMessage = "You're sending messages too quickly. Please wait a moment and try again.";
+
+  /// Show the "waking up" status only if the wake-up isn't instant.
+  @visibleForTesting
+  static Duration showWakingAfter = const Duration(seconds: 2);
 
   /// Earlier turns only (call before adding the new message), last [maxHistory].
   static List<Map<String, String>> historyFrom(List<ChatMessage> messages) {
@@ -65,6 +162,16 @@ class AgentChatService {
     }
   }
 
+  /// The server's friendly `detail` for a 429 (short, written for users), else a generic "slow down".
+  static Future<String> _rateLimitMessage(http.StreamedResponse res) async {
+    try {
+      final body = await res.stream.bytesToString().timeout(const Duration(seconds: 5));
+      final detail = (jsonDecode(body) as Map<String, dynamic>)['detail'];
+      if (detail is String && detail.trim().isNotEmpty && detail.length <= 200) return detail.trim();
+    } catch (_) {}
+    return slowDownMessage;
+  }
+
   /// Emits [AgentStatus] events, then exactly one [AgentResult] or [AgentFailure].
   /// Closing [client] (or cancelling the subscription) aborts the request.
   static Stream<AgentEvent> chat({
@@ -74,6 +181,20 @@ class AgentChatService {
     Map<String, dynamic>? userData,
     String? memory,
   }) async* {
+    if (!AgentWakeUp.isWarm) {
+      final awake = AgentWakeUp.ensureAwake(force: true);
+      final quick = await Future.any<bool?>([awake, Future<bool?>.delayed(showWakingAfter, () => null)]);
+      var ok = quick;
+      if (ok == null) {
+        yield AgentStatus(0, wakingMessage);
+        ok = await awake;
+      }
+      if (!ok) {
+        yield AgentFailure(message: wakeFailedMessage);
+        return;
+      }
+    }
+
     final http.StreamedResponse res;
     try {
       final req = http.Request('POST', Uri.parse('$agentBaseUrl/chat/stream'))
@@ -85,10 +206,16 @@ class AgentChatService {
       yield AgentFailure();
       return;
     }
+    if (res.statusCode == 429) {
+      AgentWakeUp.markAwake(); // it answered, so it is awake
+      yield AgentFailure(message: await _rateLimitMessage(res));
+      return;
+    }
     if (res.statusCode != 200) {
       yield AgentFailure();
       return;
     }
+    AgentWakeUp.markAwake();
 
     var event = 'message';
     final data = <String>[];

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/agent_chat_service.dart';
 import '../theme/app_theme.dart';
 import 'dashboard_screen.dart';
 import 'goals_screen.dart';
@@ -27,6 +28,14 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // A free-tier backend sleeps when idle and takes ~1 minute to wake: start waking it now, quietly,
+    // so it is usually ready by the time the user opens the Coach. Cheap no-op while it is awake.
+    AgentWakeUp.ensureAwake();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
@@ -39,7 +48,10 @@ class _MainScreenState extends State<MainScreen> {
         decoration: BoxDecoration(border: Border(top: BorderSide(color: context.border))),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
+          onTap: (index) {
+            AgentWakeUp.ensureAwake(); // no-op while awake; re-wakes it if it slept while the app stayed open
+            setState(() => _currentIndex = index);
+          },
           type: BottomNavigationBarType.fixed,
           selectedFontSize: 11,
           unselectedFontSize: 11,

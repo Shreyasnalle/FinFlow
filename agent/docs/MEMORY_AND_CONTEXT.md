@@ -29,3 +29,10 @@ Order: answer -> follow-ups -> classifier allows -> **memory step** -> done. Rep
 `PUT /users/{id}/data` · `GET /users/{id}/context` · `GET /users/{id}/memory` · `DELETE /users/{id}/memory` (user can clear it).
 Storage: SQLite at `agent/data/finflow_agent.db` (git-ignored; override with `FINFLOW_AGENT_DB`).
 **These endpoints have no authentication yet**: anyone who knows a `user_id` could read or replace that user's data. Add auth before going public.
+
+## Deploying (added with the Render setup)
+- Set `USERS_API_ENABLED=false` on any public deployment: the `/users/*` endpoints are then not served (404). The app does not use
+  them yet; it sends its numbers inline with each chat. The endpoints are rate limited (separate budget) and covered by the request-size cap either way.
+- On hosts without a persistent disk (Render's free plan) the SQLite file is wiped on restart, sleep and redeploy, so stored snapshots and
+  memory are not durable there. Use an external database or persistent disk before relying on them.
+- Each chat is several model calls (answer, classifier, follow-up repair when needed, memory step when a `user_id` is sent).

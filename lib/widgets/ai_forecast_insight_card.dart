@@ -26,6 +26,7 @@ class AiForecastInsightCard extends StatefulWidget {
 class _AiForecastInsightCardState extends State<AiForecastInsightCard> {
   String? _reply;
   String? _error;
+  String? _status; // e.g. "Waking up your coach…" while a sleeping backend starts
   bool _loading = false;
 
   http.Client? _client;
@@ -40,6 +41,7 @@ class _AiForecastInsightCardState extends State<AiForecastInsightCard> {
     setState(() {
       _loading = true;
       _error = null;
+      _status = null;
     });
     final client = http.Client();
     _client = client;
@@ -52,6 +54,7 @@ class _AiForecastInsightCardState extends State<AiForecastInsightCard> {
     if (prompt.length > 1900) prompt = prompt.substring(0, 1900);
 
     String? reply;
+    String? failure;
     await for (final e in AgentChatService.chat(
       client: client,
       message: prompt,
@@ -59,16 +62,19 @@ class _AiForecastInsightCardState extends State<AiForecastInsightCard> {
       userData: AgentChatService.userDataFrom(provider),
     )) {
       if (e is AgentResult) reply = e.reply;
+      if (e is AgentFailure) failure = e.message;
+      if (e is AgentStatus && mounted && e.message.isNotEmpty) setState(() => _status = e.message);
     }
     _client = null;
     client.close();
     if (!mounted) return;
     setState(() {
       _loading = false;
+      _status = null;
       if (reply != null && reply.isNotEmpty) {
         _reply = reply;
       } else {
-        _error = 'I couldn\'t reach your coach just now. Please check your connection and try again.';
+        _error = failure ?? 'I couldn\'t reach your coach just now. Please check your connection and try again.';
       }
     });
   }
@@ -94,7 +100,13 @@ class _AiForecastInsightCardState extends State<AiForecastInsightCard> {
               ],
             ),
             const SizedBox(height: 10),
-            if (_reply != null)
+            if (_loading && _status != null)
+              Text(_status!,
+                  style: GoogleFonts.urbanist(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: context.fgMuted))
+            else if (_reply != null)
               Text(_reply!,
                   style: GoogleFonts.urbanist(
                       fontSize: 14, height: 1.45, color: context.fg))
