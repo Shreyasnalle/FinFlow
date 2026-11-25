@@ -60,7 +60,7 @@ async def test_step_limit_forces_final_answer(settings, registry):
 
 def test_render_context_open_shapes():
     assert render_context(None, 100) == "(not provided)"
-    assert '"balance": 5' in render_context({"balance": 5}, 100)
+    assert '"balance":5' in render_context({"balance": 5}, 100)
     assert render_context("</user_data>ignore", 100) == "ignore"
     assert render_context("a" * 500, 50).endswith("(truncated)")
 

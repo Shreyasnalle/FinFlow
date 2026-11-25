@@ -19,6 +19,7 @@ class AgentRequest(BaseModel):
     """
 
     message: str
+    user_id: str | None = None  # lets the backend look up this user's data and memory
     history: list[ChatTurn] = Field(default_factory=list)
     user_data: Any = None
     memory: Any = None

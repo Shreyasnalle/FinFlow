@@ -47,6 +47,8 @@ def describe(stage: Stage, info: dict) -> tuple[str, str | None]:
         return "Preparing follow-up suggestions", None
     if stage == Stage.CHECKING:
         return "Double-checking the answer", None
+    if stage == Stage.REMEMBERING:
+        return "Noting anything worth remembering", None
     if stage == Stage.DONE:
         return "Ready", None
     return "Something went wrong", None

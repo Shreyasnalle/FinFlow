@@ -7,6 +7,7 @@ import yaml
 from app.skills.skill import Skill
 
 CONTENT_DIR = Path(__file__).parent / "content"
+SYSTEM_DIR = Path(__file__).parent / "system"  # skills Python runs itself; never shown in the agent's menu
 
 
 class SkillRegistry:
@@ -49,3 +50,8 @@ def _parse(path: Path) -> Skill:
     if skill.name != path.parent.name:
         raise ValueError(f"{path}: skill name '{skill.name}' must match its folder")
     return skill
+
+
+def load_system_skill(name: str, directory: Path = SYSTEM_DIR) -> Skill:
+    """Load a skill that the code (not the agent) invokes, e.g. memory_update at the end of a turn."""
+    return _parse(directory / name / "SKILL.md")

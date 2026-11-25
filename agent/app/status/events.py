@@ -13,6 +13,7 @@ class Stage(str, Enum):
     WRITING = "writing"
     FOLLOWUPS = "followups"
     CHECKING = "checking"
+    REMEMBERING = "remembering"
     DONE = "done"
     ERROR = "error"
 

@@ -30,7 +30,7 @@ def render_context(value: Any, limit: int) -> str:
     """Render open-ended user_data / memory (dict, list or text) as bounded text."""
     if value is None or value == "" or value == {} or value == []:
         return "(not provided)"
-    text = value if isinstance(value, str) else json.dumps(value, indent=2, default=str)
+    text = value if isinstance(value, str) else json.dumps(value, separators=(",", ":"), default=str)  # compact: tokens are the bottleneck
     for tag in _TAGS:  # stop the data from closing/opening our delimiters
         text = text.replace(tag, "")
     if len(text) > limit:
