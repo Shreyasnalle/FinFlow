@@ -44,6 +44,7 @@ FinFlow tracks income, spending, budgets, goals, assets and recurring bills; for
 - [Database schema](#database-schema)
 - [AI coach and the finance agent](#ai-coach-and-the-finance-agent)
 - [Configuration and secrets](#configuration-and-secrets)
+- [Deployment](#deployment)
 - [Getting started](#getting-started)
 - [Demo account](#demo-account)
 - [Building and sharing an APK](#building-and-sharing-an-apk)
@@ -150,15 +151,22 @@ Key ideas:
 │   └── widgets/                  # Bottom sheets and reusable widgets
 ├── agent/                        # Python finance-agent backend (see agent/README.md)
 │   ├── app/
+│   │   ├── main.py               # create_app(): size cap, routers, USERS_API_ENABLED switch
+│   │   ├── config.py             # Settings loaded from environment / .env
+│   │   ├── service.py            # context → agent → follow-ups → classifier → memory → reply
 │   │   ├── agent/                # Prompt builder, tool-use loop, LLM factory
-│   │   ├── skills/               # Registry + content/<skill>/SKILL.md playbooks (16)
+│   │   ├── skills/               # Registry; content/<skill>/SKILL.md playbooks (16); system/ (memory_update)
 │   │   ├── tools/                # load_skill, web_search
 │   │   ├── guardrails/           # Classifier, deterministic checks, refusal templates
 │   │   ├── followups/            # Follow-up question parser/checker/writer
 │   │   ├── status/               # Live status events (SSE)
-│   │   ├── api/                  # FastAPI routes: /health, /chat, /chat/stream
-│   │   ├── config.py             # Settings loaded from environment / .env
-│   │   └── service.py            # agent → classifier → reply
+│   │   ├── context/              # Snapshot schema + Python-computed numbers + context provider
+│   │   ├── memory/               # Per-user memory.md: decision, checker, document, keeper
+│   │   ├── store/                # SQLite stores for synced snapshots and memory
+│   │   └── api/                  # routes (/health, /chat, /chat/stream), users (/users/*),
+│   │                             # rate_limit, body_limit
+│   ├── docs/MEMORY_AND_CONTEXT.md# How user data and memory work
+│   ├── assets/flow_screenshots/  # Agent and guardrail flow diagrams
 │   ├── tests/                    # pytest (offline) + live tests (opt-in)
 │   ├── .env.example              # Template for secrets (copy to .env)
 │   └── pyproject.toml
@@ -167,7 +175,9 @@ Key ideas:
 ├── assets/stitch/                # Design reference mock-ups (HTML + PNG)
 ├── test/                         # Flutter tests (database, forecast, calendar, demo seed)
 ├── docs/screenshots/             # Images used in this README
-├── DEVELOPMENT.md                # Setup guide and coding rules for contributors
+├── render.yaml                   # Render Blueprint that deploys agent/ (see Deployment)
+├── DEVELOPMENT.md                # Setup guide, coding rules and the Render deploy guide
+├── LICENSE                       # MIT
 ├── pubspec.yaml
 └── analysis_options.yaml
 ```
@@ -304,20 +314,22 @@ erDiagram
 
 ### Changing the schema
 
-Never edit a released migration. Append a new list to `migrations` in `lib/database/schema/schema.dart`. See [DEVELOPMENT.md](DEVELOPMENT.md#changing-the-database).
+Never edit a released migration. Append a new list to `migrations` in `lib/database/schema/schema.dart`. See [DEVELOPMENT.md](DEVELOPMENT.md#7-changing-the-database).
 
 ## AI coach and the finance agent
 
 The **Coach** tab and the forecast **AI suggestion** card talk to the Python service in [`agent/`](agent/README.md) over `POST /chat/stream` (Server-Sent Events).
 
 ```text
-user message + snapshot of the user's finances + memory
+user message + the user's numbers + the user's memory      (inline from the app, or looked up by user_id)
         │
    FinanceAgent (LangChain) ──► load_skill (16 skills) ──► web_search (only if a skill allows it)
         │  draft
+   Follow-up questions (3, checked and repaired by Python)
+        │
    Classifier (separate model call, no tools, no user data)
         │  allow / block
-   reply  — or a friendly out-of-scope message
+   Memory step (only for allowed replies) ──► reply  — or a friendly out-of-scope message
 ```
 
 - **16 skills** (Markdown playbooks in `agent/app/skills/content/`): app help, big-purchase planning, bills & subscriptions, budgeting, cash-flow forecast, debt management, emergency fund, financial literacy, investing education, market & news lookup, money-habits coaching, monthly review, net worth & assets, savings goals, spending analysis, tax basics. Adding a feature means adding a folder.
@@ -326,9 +338,26 @@ user message + snapshot of the user's finances + memory
 - **Live status:** the stream emits stages such as `reading_context`, `thinking`, `loading_skill`, `searching_web`, `writing`, `checking`, `done`.
 - **Endpoints:** `GET /health`, `POST /chat`, `POST /chat/stream`.
 - **Rate limited:** the chat endpoints (and, separately, the `/users` endpoints) are limited per client IP and globally (HTTP 429 with `Retry-After`), and request bodies are capped (HTTP 413), so a public deployment can't drain the model quota or run out of memory.
-- **Per-user data and memory (backend, not used by the app yet):** the agent can store a synced data snapshot and a `memory.md` per `user_id` (`PUT /users/{id}/data`, memory endpoints; see [`agent/docs/MEMORY_AND_CONTEXT.md`](agent/docs/MEMORY_AND_CONTEXT.md)). These endpoints have no authentication, so public deployments turn them off with `USERS_API_ENABLED=false`.
 
-What the app sends with each chat: your name, profession, currency, today's date, cash balance, average monthly net, this month's income and spending (total and by category), budgets, goals, recurring bills and assets. It does **not** send individual transactions, your PIN or your mobile number.
+### Where the agent's numbers and memory come from
+
+- **Python does the arithmetic, the model only explains.** `app/context/numbers.py` computes cash balance, this and last month's income and spending, savings rate, runway, top categories, budget used %, goal progress and the monthly amount each goal needs, upcoming bills, asset allocation and net worth. The agent reads those numbers; it never calculates them.
+- **Two ways to supply the data.** The app can send it inline with each chat (`user_data`, `memory`), which is what it does today. Or it can sync a snapshot with `PUT /users/{id}/data` and send only a `user_id`, and the backend looks the data and memory up itself. Inline values win over stored ones. `GET /users/{id}/context` shows exactly what the agent sees.
+- **Memory is the last step of every turn** (answer → follow-ups → classifier allows → memory → done). A `memory_update` system skill (run by Python, not in the agent's skill menu) decides whether the user said something durable worth remembering: who they are, goals and why, preferences, lasting situation. Python enforces the decision on every turn: a missing or empty decision is retried (up to twice) and otherwise nothing is written, notes must be 10–200 characters with no secrets, links or instructions aimed at the assistant (this blocks prompt injection into memory), at most 3 notes are added per turn, and the file is capped at 6000 characters (oldest notes are evicted). Replies the classifier blocks are never remembered, and a memory failure never breaks the answer. The decision uses the small, fast model.
+- **Storage** is a small SQLite file on the server (synced snapshots and each user's `memory.md`). Users can inspect and clear their memory (`GET` / `DELETE /users/{id}/memory`). Details: [`agent/docs/MEMORY_AND_CONTEXT.md`](agent/docs/MEMORY_AND_CONTEXT.md).
+- **Status today:** the backend side is built and tested; the app does not use `user_id`, the sync endpoint or memory yet, so `memory_status` is `no_user` for app traffic.
+
+### Hardening for a public deployment
+
+These protections exist because the service is meant to be reachable from the internet on a small (512 MB) host:
+
+- **Rate limiting** (`app/api/rate_limit.py`): per client IP and global limits, in memory, with a separate budget for the `/users` endpoints. Blocked requests get HTTP 429 with `Retry-After` and never reach the model. The client IP is read from the right-hand side of `X-Forwarded-For` so it can't be spoofed from the left.
+- **Request size cap** (`app/api/body_limit.py`): bodies over 2 MB get HTTP 413 before being read into memory (checked up front from `Content-Length`, and counted as chunked bodies stream in).
+- **`USERS_API_ENABLED`:** the `/users/*` endpoints have no authentication yet, so a public deployment switches them off (404).
+- **One worker**, because the limiter's counters live in the process.
+- `/health` is never limited, so wake-up pings always work.
+
+What the app sends with each chat: your name, profession, currency, today's date, cash balance, average monthly net, this month's income and spending (total and by category), budgets, goals, recurring bills and assets. It does **not** send individual transactions, your PIN or your mobile number. The app sends this inline and no `user_id`, so nothing is stored on the server for it yet.
 
 ## Configuration and secrets
 
@@ -361,6 +390,50 @@ Rate limiting defaults (all optional): `RATE_LIMIT_PER_MINUTE=12` and `RATE_LIMI
 These are public, non-secret values. Do not put keys in `--dart-define`: anything compiled into an app can be extracted.
 
 The app's market and news features use public, key-less endpoints (Yahoo Finance, CoinGecko, Frankfurter, RSS-to-JSON).
+
+## Deployment
+
+The app itself needs no server: it is built into an APK (or a web bundle) and keeps its data on the device. **Only the Python finance agent needs hosting**, and only for the Coach and the forecast AI card. The target setup is Render's free plan.
+
+### The approach
+
+- **One repo, one folder to deploy.** The agent already lives in its own folder (`agent/`) with its own `pyproject.toml`, tests, docs and `.env.example`, and it imports nothing from the Flutter app. Instead of splitting the repo, the root [`render.yaml`](render.yaml) Blueprint points Render at that folder (`rootDir: agent`), so Render builds and runs only the agent. Keeping one repo keeps the app and the chat contract in sync.
+- **Config as code.** `render.yaml` holds the build command (`pip install .`), start command (`uvicorn app.main:app --host 0.0.0.0 --port $PORT`), health check (`/health`), a pinned Python version (3.12.9, the one we test with), the free plan, and every non-secret setting. A build filter redeploys only when `agent/` changes, so Flutter-only commits don't restart the backend.
+- **Secrets stay out of git.** `GROQ_API_KEY` is declared with `sync: false`, so Render asks for it in its dashboard once. Nothing secret is in the repo, and the app contains no keys.
+- **Safe by default on the public internet:** rate limits, the request-size cap, one worker, and the unauthenticated `/users` endpoints switched off (`USERS_API_ENABLED=false`).
+- **The app is built against the hosted URL:** `flutter build apk --release --dart-define=AGENT_BASE_URL=https://<your-service>.onrender.com`. Render serves HTTPS, which also avoids Android's plain-`http://` block.
+
+### How the app copes with a free-plan service
+
+A free Render service sleeps after about 15 idle minutes and takes about a minute to wake. The app handles this instead of showing "coach unavailable":
+
+```mermaid
+sequenceDiagram
+    participant App as FinFlow app
+    participant R as Agent on Render (free plan)
+    participant G as Groq
+    App->>R: GET /health (app open, tab change, or before a chat)
+    Note over R: asleep after ~15 idle min, ~1 min to wake
+    R-->>App: 200 {"status":"ok"}
+    App->>R: POST /chat/stream
+    Note over R: size cap, then rate limit, then agent
+    R->>G: model calls (answer, classifier, memory)
+    G-->>R: results
+    R-->>App: live status events, then the reply
+```
+
+`AgentWakeUp` (`lib/services/agent_chat_service.dart`) pings `/health` quietly when the app opens and on tab changes, treats the backend as awake for 10 minutes after it last answered, and before a chat waits for it (retrying for up to 75 seconds). It shows "Waking up your coach…" only if the wait is longer than 2 seconds, fails fast if the server can't be reached at all, and turns a rate-limit reply into a friendly message.
+
+### Free-plan limits
+
+- 512 MB RAM and a single instance. The agent uses about 94 MB after startup, and about 106 MB after handling a 6 MB rejected upload.
+- The filesystem is not persistent, so the agent's SQLite file (snapshots and memory) is wiped on every sleep, restart and redeploy. That is another reason the `/users` endpoints are off for now.
+- 750 free instance hours per month: enough for one always-on service.
+- Each chat is several model calls (answer, classifier, follow-up repair when needed, plus the memory step when a `user_id` is sent), so the global rate limits are also the model-quota budget.
+
+### Status
+
+`render.yaml` and the deploy guide are in the repo, but this README does not claim a live deployment. Step-by-step instructions (create the Blueprint, enter the key, verify the client IP the rate limiter sees, then rebuild the app) are in [DEVELOPMENT.md](DEVELOPMENT.md#deploying-the-agent-to-render).
 
 ## Getting started
 
@@ -416,10 +489,11 @@ cd agent
 
 Here is exactly what the code does today:
 
-- **Data location:** all financial records are stored in a local SQLite file on the device (IndexedDB in the browser). There is no cloud sync and no account server.
+- **Data location:** all financial records are stored in a local SQLite file on the device (IndexedDB in the browser). There is no account server, and the app does not upload your records: with each chat it sends only a summary (see [AI coach](#ai-coach-and-the-finance-agent)). The agent backend can store a synced snapshot and per-user memory on the server, but the app doesn't use that yet and public deployments keep it switched off.
 - **The database file is not encrypted.** Older builds used SQLCipher; the current build opens plain SQLite (an old encrypted file is moved aside, not deleted). Anyone with access to an unlocked/rooted device or the app's data directory could read it.
 - **The PIN is a screen lock**, stored only as a salted, iterated SHA-256 hash. A 4-digit PIN is brute-forceable by nature.
 - **Network use:** public market/news APIs, and the finance agent you configure (which forwards chat content to Groq and, if enabled, searches via Firecrawl).
+- **Abuse protection (agent):** rate limits, a request-size cap and a single worker; the unauthenticated `/users` endpoints are off on public deployments.
 - **Secrets:** none in the repo; see [Configuration and secrets](#configuration-and-secrets).
 - **Backups:** Android `allowBackup` is disabled.
 
@@ -431,6 +505,8 @@ The coach gives educational guidance, not licensed financial advice.
 - **Live stock/commodity quotes don't load in a browser** (the quote provider blocks cross-origin requests); they work in the Android app. Crypto, forex and news work on web.
 - **The AI Coach needs the Python agent to be running and reachable.** The default URL targets the Android emulator, so shared APKs need `AGENT_BASE_URL` pointing at a hosted agent. A free Render deployment is described in [DEVELOPMENT.md](DEVELOPMENT.md#deploying-the-agent-to-render); the app wakes a sleeping free-tier backend automatically.
 - **Android blocks plain `http://` traffic by default** and the project has no cleartext exception, so on Android the Coach needs an `https://` agent URL (see [DEVELOPMENT.md](DEVELOPMENT.md#3-running-the-project) for a debug-only workaround).
+- **The first Coach message after a quiet spell can take up to about a minute** on a free-plan host (it is waking up); the app shows "Waking up your coach…".
+- **Server-side memory and snapshots aren't durable on Render's free plan** (no persistent disk), and the `/users` endpoints have no authentication, so they are off on public deployments. The app doesn't use them yet.
 - **Release builds are debug-signed** until a release keystore is configured.
 - `lib/services/ai_coach_service.dart` still contains an older direct-to-Anthropic client (user-supplied key); no screen uses it any more, only its `ChatMessage` type is shared.
 - The database is not encrypted (see above).
